@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Phonon TTS",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Read selected text aloud with Phonon, on-device. No server, no API key.",
   "permissions": [
     "activeTab",
@@ -43,7 +43,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "phonon-tts@localhost",
+      "id": "phonon-tts@piatek.de",
       "strict_min_version": "140.0",
       "data_collection_permissions": {
         "required": ["none"]
