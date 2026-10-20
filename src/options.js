@@ -1,5 +1,6 @@
 import { collectModelFiles } from "./model-files.js";
-import { deleteModel, listModels, putModel } from "./store.js";
+import { collectVoiceFiles } from "./voice-files.js";
+import { deleteModel, deleteVoice, listModels, putModel, putVoices } from "./store.js";
 
 const api = globalThis.browser ?? globalThis.chrome;
 const SAMPLES = {
@@ -20,6 +21,11 @@ const els = {
   modelPicker: $("modelPicker"),
   modelInfo: $("model-info"),
   missing: $("missing"),
+  importVoices: $("importVoices"),
+  importVoiceFolder: $("importVoiceFolder"),
+  voicePicker: $("voicePicker"),
+  voiceFolderPicker: $("voiceFolderPicker"),
+  voiceList: $("voice-list"),
   lang: $("lang"),
   voice: $("voice"),
   device: $("device"),
@@ -59,6 +65,91 @@ function node(tag, text) {
   return element;
 }
 
+function badge(text, className) {
+  const element = node("span", text);
+  element.className = className ? `badge ${className}` : "badge";
+  return element;
+}
+
+function voiceRow(model, name, kind, voice) {
+  const row = document.createElement("div");
+  row.className = "voice-row";
+
+  const main = document.createElement("div");
+  main.className = "voice-main";
+  const title = document.createElement("div");
+  title.className = "voice-name";
+  title.append(node("strong", name));
+  title.append(badge(kind === "model" ? "model" : "library", kind === "model" ? "model" : ""));
+  if (voice?.shadowed) {
+    title.append(badge("hidden by model", "shadowed"));
+    title.lastChild.title = "The model ships a voice with this name, which is used instead.";
+  }
+  if (voice?.language) title.append(node("span", "voice-meta", voice.language));
+  main.append(title);
+  if (voice?.description) main.append(node("div", "voice-desc", voice.description));
+  row.append(main);
+
+  const actions = document.createElement("div");
+  actions.className = "voice-actions";
+
+  const use = node("button", "Use");
+  use.type = "button";
+  use.className = "mini";
+  use.addEventListener("click", async () => {
+    els.voice.value = name;
+    await saveForm();
+    showStatus(`Voice: ${name}`, "ok");
+  });
+  actions.append(use);
+
+  const preview = node("button", "Preview");
+  preview.type = "button";
+  preview.className = "mini ghost";
+  if (voice?.shadowed) {
+    preview.disabled = true;
+    preview.title = "The model ships a voice with this name, so this one cannot be used.";
+  }
+  preview.addEventListener("click", async () => {
+    showStatus(`Previewing ${name}…`, "ok");
+    await send({ type: "speak", text: els.preview.value, voice: name });
+  });
+  actions.append(preview);
+
+  if (kind === "library") {
+    const remove = node("button", "×");
+    remove.type = "button";
+    remove.className = "mini danger";
+    remove.title = `Delete ${name} from this browser`;
+    remove.addEventListener("click", async () => {
+      if (!confirm(`Delete the voice "${name}" from this browser?`)) return;
+      await deleteVoice(name);
+      if (els.voice.value === name) {
+        // Fall back to one of the model's own voices; `model.defaultVoice` may be the one
+        // that was just deleted.
+        els.voice.value = model.modelVoices.includes("default") ? "default" : model.modelVoices[0] ?? "";
+      }
+      await saveForm();
+      showStatus(`Deleted ${name}`, "ok");
+    });
+    actions.append(remove);
+  }
+
+  row.append(actions);
+  return row;
+}
+
+function renderVoices(model) {
+  els.voiceList.replaceChildren();
+  for (const name of model.modelVoices) els.voiceList.append(voiceRow(model, name, "model", null));
+  for (const voice of model.library) els.voiceList.append(voiceRow(model, voice.name, "library", voice));
+  if (model.modelVoices.length === 0 && model.library.length === 0) {
+    const empty = node("div", "No voices yet. Import one above, or import a model (its own voices come with it).");
+    empty.className = "hint";
+    els.voiceList.append(empty);
+  }
+}
+
 function missingNodes(model) {
   if (model.source === "none") {
     return [
@@ -89,11 +180,10 @@ function engineSummary(engine) {
 
 function renderModelChoices(settings) {
   els.modelName.replaceChildren();
-  if (imported.length === 0) {
-    const option = node("option", "No model imported");
-    option.value = "";
-    els.modelName.append(option);
-  }
+  const placeholder = node("option", imported.length === 0 ? "No model imported" : "Choose a model…");
+  placeholder.value = "";
+  placeholder.disabled = true;
+  els.modelName.append(placeholder);
   for (const model of imported) {
     const option = node("option", `Imported: ${model.name} (${mb(model.bytes)})`);
     option.value = model.name;
@@ -140,6 +230,8 @@ function render(state) {
     model.source === "none"
       ? "No model imported"
       : `${model.modelDir} · ${source} · ${model.voices.length} voice${model.voices.length === 1 ? "" : "s"}`;
+
+  renderVoices(model);
 
   if (model.source === "none" || model.missing.length > 0) {
     els.missing.classList.remove("hidden");
@@ -241,10 +333,44 @@ els.deleteModel.addEventListener("click", async () => {
     imported = await listModels();
     els.modelName.value = "";
     await saveForm();
-    showStatus(`Deleted ${name}. The extension will use the folder option.`, "ok");
+    showStatus(`Deleted ${name}. Import a model to speak again.`, "ok");
   } catch (error) {
     showStatus("Could not delete: " + (error?.message ?? error), "error");
   }
+});
+
+async function importVoices(files) {
+  els.importVoices.disabled = true;
+  els.importVoiceFolder.disabled = true;
+  showStatus("Reading the voices…");
+  try {
+    const { voices, skipped } = await collectVoiceFiles(files);
+    showStatus(`Storing ${voices.length} voice${voices.length === 1 ? "" : "s"}…`);
+    await putVoices(voices);
+    await refresh();
+    const extra = skipped.length ? `, ${skipped.length} file${skipped.length === 1 ? "" : "s"} skipped` : "";
+    showStatus(`Imported ${voices.length} voice${voices.length === 1 ? "" : "s"}${extra}.`, "ok");
+  } catch (error) {
+    showStatus("Voice import failed: " + (error?.message ?? error), "error");
+  } finally {
+    els.importVoices.disabled = false;
+    els.importVoiceFolder.disabled = false;
+  }
+}
+
+els.importVoices.addEventListener("click", () => els.voicePicker.click());
+els.importVoiceFolder.addEventListener("click", () => els.voiceFolderPicker.click());
+
+els.voicePicker.addEventListener("change", async () => {
+  const files = [...els.voicePicker.files];
+  els.voicePicker.value = "";
+  if (files.length > 0) await importVoices(files);
+});
+
+els.voiceFolderPicker.addEventListener("change", async () => {
+  const files = [...els.voiceFolderPicker.files];
+  els.voiceFolderPicker.value = "";
+  if (files.length > 0) await importVoices(files);
 });
 
 els.speak.addEventListener("click", async () => {

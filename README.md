@@ -18,8 +18,8 @@ model is WebAssembly in an extension worker instead of a local TTS backend.
 - **Runs on the CPU** by default, and on **WebGPU** when the browser hands out a real adapter
   (setting: `Auto`). On a typical laptop the CPU build is around 5× faster than real time,
   single-threaded.
-- **Options page** — import the model folder, language, voice, device, temperature, and a Speak
-  button for trying a sentence.
+- **Options page** — import the model folder, import voices, language, device, temperature, and a
+  Speak button for trying a sentence.
 
 The model uses about 100 MB of memory while loaded. Firefox terminates idle extension
 background pages, so after a long pause the next click reloads the checkpoint (well under a
@@ -90,14 +90,40 @@ Browsers never give an extension a durable path to a folder on disk: a picker ha
 *contents*. Copying them into the extension's storage is what makes "pick once, use forever"
 possible. Nothing is uploaded anywhere.
 
-### 3. Load the extension
+### 3. Add voices (optional)
+
+Every checkpoint brings one `default` voice. More voices are small `.safetensors` files (about
+256 KB each) from the public
+[gradium/phonon-voices](https://huggingface.co/gradium/phonon-voices) catalog (~100 voices) or
+Gradium Studio:
+
+```powershell
+hf download gradium/phonon-voices --local-dir models/phonon-voices
+```
+
+Then **Settings → Voices → Folder…** and pick `models/phonon-voices` (the folder with
+`voices.jsonl`). Or use **Import voice files…** for a handful of `.safetensors`. Names,
+languages and descriptions come from `voices.jsonl`; a file without it falls back to its file
+name (catalog files are named by voice id, so the listing is worth including).
+
+Voices are stored in the browser and **shared by every imported model** — the file format is the
+same across the Phonon family. `Use` selects one, `Preview` speaks the text in the Try-it box
+with it without changing the saved voice, and `×` deletes it. A model's own voice wins over a
+library voice with the same name (every checkpoint has `default`).
+
+The browser build speaks ready-made voices only; voice cloning is not available.
+
+If you would rather keep a voice inside a checkpoint, `npm run fetch-model -- --voice Zoey`
+downloads it into the model folder, and importing that folder brings it along.
+
+### 4. Load the extension
 
 `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** → pick
 `src/manifest.json`. For a packaged install, `npm run build` writes a zip to
 `web-ext-artifacts/` (rename it to `.xpi`, or sign it on AMO). The imported model lives in the
 browser's storage, not the XPI, so the package stays small.
 
-### 4. Check it
+### 5. Check it
 
 In **Settings**, pick the language of the text you read, then press **Speak** in the "Try it"
 card. The status line reports load progress and the device the model is running on. With no
@@ -120,9 +146,9 @@ Portuguese. Use **None** to pass text through as written.
 
 - `npm test` — the Node test suite (settings, model spec, playback scheduling, and the
   background flow with a fake engine).
-- `npm run bench -- --model models/phonon-31m-en` — loads a model through the wasm build
-  and writes `bench.wav`, printing load time and speed relative to real time. Useful to check a
-  download without the browser.
+- `npm run bench -- --model models/phonon-31m-en --voice Zoey` — loads a model through the wasm
+  build and writes `bench.wav`, printing load time and speed relative to real time. Useful to
+  check a download and a voice without the browser.
 - **Self-test page** — in `about:debugging`, find the extension and open
   `selftest.html` from its "Inspect" page, or visit
   `moz-extension://<uuid>/selftest.html`. It speaks one sentence through the real background
@@ -136,18 +162,21 @@ Portuguese. Use **None** to pass text through as written.
 | `src/background.js` | MV3 event page: menus, toolbar, model lifetime, playback, keep-alive. |
 | `src/engine.js` | The only place that imports the vendored runtime; tests replace it with a fake. |
 | `src/model.js` | Describes the imported checkpoint and builds the runtime's `ModelSpec`. |
-| `src/model-files.js` | Validates the files from the folder picker and reads `voices.json`. |
-| `src/store.js` | Imported checkpoints in IndexedDB (blobs), listed and deleted from the options page. |
+| `src/model-files.js` | Validates the files from the folder picker, reads `voices.json`, keeps only what the runtime opens. |
+| `src/voice-files.js` | Validates picked voice files and names them from `voices.jsonl`. |
+| `src/store.js` | Imported checkpoints and voices in IndexedDB, listed and deleted from the options page. |
 | `src/player.js` | Schedules streamed `Float32Array` chunks on one 24 kHz `AudioContext`. |
 | `src/settings.js` | Language, voice, device, temperature, imported model name. |
 | `src/options.*` | Settings UI, model import/delete, live status. |
 | `src/vendor/phonon-tts/` | [`phonon-tts`](https://www.npmjs.com/package/phonon-tts) 0.4.0, copied from `node_modules` by `npm run vendor`. Plain ES modules plus the wasm builds. |
 | `scripts/fetch-model.mjs` | Downloads a checkpoint (and voices) from Hugging Face into `models/`. |
 
-An imported model lives in IndexedDB as `Blob`s. The background page reads them when the model
-loads and makes `blob:` URLs for the runtime, which only accepts URLs; the URLs are revoked when
-the model is replaced. That is why the import happens in the options page but the URLs are made
-in the background: a blob URL dies with the page that created it.
+An imported model lives in IndexedDB as `Blob`s, and so does the voice library. The background
+page reads them when the model loads and makes `blob:` URLs for the runtime, which only accepts
+URLs; the URLs are revoked when the model is replaced. That is why the import happens in the
+options page but the URLs are made in the background: a blob URL dies with the page that
+created it. Model voices are used first; a library voice with a name the model already has is
+skipped.
 
 The runtime needs WebAssembly SIMD (all current Firefox, Chrome, Safari). Threads are not
 available in extension pages, because those are not cross-origin isolated; the model runs on one

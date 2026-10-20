@@ -21,10 +21,18 @@ function record(name = "my-model") {
 }
 
 describe("describeModel", () => {
-  test("reports that nothing is imported yet", async () => {
-    const model = await describeModel({ settings: { modelName: "" }, store: { getModel: async () => null } });
+  test("reports that nothing is imported yet, but still lists the voice library", async () => {
+    const store = {
+      getModel: async () => null,
+      allVoices: async () => [{ name: "Zoey", blob: new Blob(["z"]) }]
+    };
+    const model = await describeModel({ settings: { modelName: "" }, store });
     assert.equal(model.source, "none");
     assert.deepEqual(model.voices, []);
+    assert.deepEqual(
+      model.library.map((voice) => voice.name),
+      ["Zoey"]
+    );
   });
 
   test("surfaces the voices of the imported model", async () => {
@@ -43,6 +51,24 @@ describe("describeModel", () => {
 
     const gone = await describeModel({ settings: { modelName: "m", voice: "Deleted" }, store });
     assert.equal(gone.defaultVoice, "default");
+  });
+
+  test("library voices join the model's, and a model voice shadows one with the same name", async () => {
+    const library = [
+      { name: "Zoey", blob: new Blob(["zoey"]), bytes: 4, language: "en", description: "Playful" },
+      { name: "default", blob: new Blob(["other"]), bytes: 5 }
+    ];
+    const store = { getModel: async (name) => record(name), allVoices: async () => library };
+
+    const model = await describeModel({ settings: { modelName: "m", voice: "Zoey" }, store });
+    assert.deepEqual(model.voices, ["default", "Anna", "Zoey"]);
+    assert.deepEqual(model.modelVoices, ["default", "Anna"]);
+    assert.equal(model.defaultVoice, "Zoey");
+    assert.deepEqual(
+      model.library.map((voice) => voice.name),
+      ["Zoey", "default"],
+      "the library still lists the shadowed one, for the UI to mark"
+    );
   });
 
   test("a deleted imported model is an error worth showing", async () => {
@@ -86,6 +112,29 @@ describe("buildSpec", () => {
     assert.equal(spec.defaultVoice, "Anna");
     assert.deepEqual(blobUrls, ["blob:test/1", "blob:test/2", "blob:test/3", "blob:test/4", "blob:test/5"]);
     assert.deepEqual(revoked, [], "the caller revokes them when the model is disposed");
+  });
+
+  test("adds library voices, skipping one the model shadows", (t) => {
+    let count = 0;
+    t.mock.method(URL, "createObjectURL", () => `blob:test/${++count}`);
+
+    const { spec, blobUrls } = buildSpec({
+      source: "imported",
+      defaultVoice: "Zoey",
+      record: record(),
+      library: [
+        { name: "Zoey", blob: new Blob(["zoey"]) },
+        { name: "default", blob: new Blob(["shadowed"]) }
+      ]
+    });
+
+    assert.deepEqual(spec.voices, {
+      default: "blob:test/1",
+      Anna: "blob:test/2",
+      Zoey: "blob:test/3"
+    });
+    assert.equal(spec.weights.q8, "blob:test/4");
+    assert.equal(blobUrls.length, 6);
   });
 
   test("refuses a record whose files are incomplete", () => {

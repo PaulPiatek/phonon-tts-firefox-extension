@@ -6,9 +6,9 @@
   runtime: menus, model lifetime, playback. `options.*` is the settings page.
 - `src/vendor/phonon-tts/` — the runtime, copied from `node_modules/phonon-tts` by
   `npm run vendor`. Never edit by hand; bump the dependency and re-run.
-- `src/store.js` + `src/model-files.js` — the only model source: a folder picked in the options
-  page is validated, copied into IndexedDB as blobs, and listed by name. No model ships with the
-  extension and there is no models folder to read.
+- `src/store.js` + `src/model-files.js` + `src/voice-files.js` — the only model source (a folder
+  picked in the options page, validated, filtered to the files the runtime opens and copied into
+  IndexedDB as blobs) plus the global voice library. No model ships with the extension.
 - `scripts/` — `fetch-model.mjs` (Hub download into `models/`), `bench.mjs` (wasm diagnostic),
   `vendor-runtime.mjs`.
 
@@ -18,7 +18,8 @@
 - `npm run lint` — `web-ext lint`, must stay at 0 errors / 0 warnings.
 - `npm run vendor` — refresh `src/vendor/phonon-tts` after changing the dependency.
 - `npm run fetch-model -- --voice Zoey` — model/voices into `models/…`, to import in the UI.
-- `npm run bench -- --model models/phonon-31m-en` — real wasm run in Node, writes `bench.wav`.
+- `npm run bench -- --model models/phonon-31m-en --voice Zoey` — real wasm run in Node, writes
+  `bench.wav`.
 - Load for testing: `about:debugging#/runtime/this-firefox` → Load Temporary Add-on →
   `src/manifest.json`.
 
@@ -42,9 +43,22 @@
 - **Imported models become blob URLs in the background page, never in the options page.** A blob
   URL dies with the document that created it, and the background page is what restarts and
   reloads the model. `disposeEngine` must revoke `state.blobUrls`, and a failed load must revoke
-  the URLs it just made.
+  the URLs it just made. Library voices are blob URLs too and go in the same list.
+- **Voices are a global library, not part of a model.** They live in the `voices` store of the
+  same IndexedDB (v2). A voice name the model already has (`default` on every checkpoint)
+  shadows the library one: `describeModel` leaves it out of `voices`, `buildSpec` skips it, and
+  the UI marks it. `settings.voice` may name either kind.
+- **Voice names come from the catalog's `voices.jsonl`, not the file names.** Catalog files are
+  named by voice id (`NbpkqMVS3CJeq2j8.safetensors`), so dropping the listing loses only the
+  friendly names. `voices.json` (the model manifest) is accepted as a fallback.
+- **The model importer filters.** Only `config.json`, `tokenizer.json`, one weights file
+  (`model.q8.gguf` or `model.safetensors`) and the voices the manifest names are stored. Do not
+  go back to copying the whole repo: `hf download` pulls ~260 MB of extra quants and
+  `tokenizer.model`.
+- **`putVoices` writes blobs in one transaction.** Adding the 100-voice catalog is ~26 MB; keep
+  it batched or IDB will crawl.
 - **`unlimitedStorage`** is in the manifest because an imported checkpoint is ~75 MB of
-  IndexedDB. Do not remove it.
+  IndexedDB plus the voice library. Do not remove it.
 - **`cache: false`** on `PhononTTS.load`: the checkpoint is local, so Cache API copies are pure
   duplication.
 - **Firefox MV3 CSP needs `'wasm-unsafe-eval'`** in `content_security_policy.extension_pages`, or

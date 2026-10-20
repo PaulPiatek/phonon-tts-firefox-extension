@@ -219,7 +219,7 @@ function fail(error) {
   setStatus("Error: " + message, "!");
 }
 
-async function speak(text) {
+async function speak(text, voiceOverride) {
   const clean = (text || "").trim();
   if (!clean) {
     setStatus("Select some text first", "!");
@@ -266,7 +266,8 @@ async function speak(text) {
   }
   if (state.session?.id !== id) return;
 
-  const voice = engine.voices?.includes(settings.voice) ? settings.voice : undefined;
+  const preferred = voiceOverride && engine.voices?.includes(voiceOverride) ? voiceOverride : settings.voice;
+  const voice = engine.voices?.includes(preferred) ? preferred : undefined;
   setStatus("Speaking…", "■", true);
   try {
     for await (const pcm of engine.stream(clean, {
@@ -345,6 +346,8 @@ async function describeState() {
       source: "imported",
       modelDir: settings.modelName,
       voices: [],
+      modelVoices: [],
+      library: [],
       defaultVoice: null
     };
     missing = [error instanceof Error ? error.message : String(error)];
@@ -358,6 +361,15 @@ async function describeState() {
       source: model.source,
       modelDir: model.modelDir,
       voices: model.voices,
+      modelVoices: model.modelVoices ?? [],
+      library: (model.library ?? []).map((voice) => ({
+        name: voice.name,
+        bytes: voice.bytes ?? voice.blob?.size ?? 0,
+        language: voice.language,
+        description: voice.description,
+        voiceId: voice.voiceId,
+        shadowed: (model.modelVoices ?? []).includes(voice.name)
+      })),
       defaultVoice: model.defaultVoice,
       missing
     },
@@ -384,7 +396,7 @@ async function handleMessage(message) {
     case "speak": {
       // Not awaited: the reply says the speech started, and status updates follow.
       const text = message.text || TEST_TEXT[normalizeSettings(message.settings).lang] || TEST_TEXT.en;
-      speak(text).catch((error) => fail(error));
+      speak(text, message.voice).catch((error) => fail(error));
       return { ok: true };
     }
     case "stop":

@@ -36,6 +36,23 @@
     </div>
 
     <div class="card">
+      <div class="card-title">Voices</div>
+      <div class="row">
+        <button type="button" class="primary" id="importVoices">Import voice files…</button>
+        <button type="button" class="ghost" id="importVoiceFolder">Folder…</button>
+      </div>
+      <input type="file" id="voicePicker" accept=".safetensors" multiple class="hidden">
+      <input type="file" id="voiceFolderPicker" webkitdirectory multiple class="hidden">
+      <div class="hint">
+        A voice is a small <code>.safetensors</code> file from
+        <a href="https://huggingface.co/gradium/phonon-voices" target="_blank" rel="noreferrer">gradium/phonon-voices</a>
+        or Gradium Studio. Voices are kept in this browser and shared by every imported model.
+        Pick the catalog folder (the one with <code>voices.jsonl</code>) to get friendly names.
+      </div>
+      <div id="voice-list" class="voice-list"></div>
+    </div>
+
+    <div class="card">
       <div class="card-title">Speech</div>
       <label>Language of the text
         <select id="lang">

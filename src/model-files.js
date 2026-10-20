@@ -4,6 +4,10 @@
 // never a path on disk. So the files are copied into browser storage once (see store.js), and
 // the model is loaded from there afterwards. This module is the pure part: which files are
 // there, which one is the voice manifest, and what is missing.
+//
+// Only what the runtime reads is kept. `hf download` fetches a whole repo, including extra
+// quants and `tokenizer.model`, and copying those into IndexedDB would triple the size of an
+// import for no benefit.
 
 export const REQUIRED_FILES = ["config.json", "tokenizer.json"];
 export const WEIGHT_FILES = ["model.q8.gguf", "model.safetensors"];
@@ -40,44 +44,59 @@ export async function collectModelFiles(fileList) {
 
   const paths = entries.map((file) => (file.webkitRelativePath || file.name).replace(/\\/g, "/"));
   const root = sharedRoot(paths);
-  const files = {};
+  const all = {};
   entries.forEach((file, index) => {
     const path = root ? paths[index].slice(root.length + 1) : paths[index];
-    files[path] = file;
+    all[path] = file;
   });
 
-  const missing = REQUIRED_FILES.filter((name) => !files[name]);
+  const missing = REQUIRED_FILES.filter((name) => !all[name]);
   if (missing.length) throw new Error(`the folder has no ${missing.join(" or ")}`);
 
-  const weights = WEIGHT_FILES.find((name) => files[name]);
-  if (!weights) throw new Error(`the folder has no ${WEIGHT_FILES.join(" or ")}`);
+  const weights = WEIGHT_FILES.find((name) => all[name]);
+  if (!weights) {
+    if (all["model.q4k.gguf"]) {
+      throw new Error("only model.q4k.gguf is there; this runtime loads model.q8.gguf or model.safetensors");
+    }
+    throw new Error(`the folder has no ${WEIGHT_FILES.join(" or ")}`);
+  }
 
   let manifest = {};
-  if (files[MANIFEST_FILE]) {
+  if (all[MANIFEST_FILE]) {
     let parsed;
     try {
-      parsed = JSON.parse(await files[MANIFEST_FILE].text());
+      parsed = JSON.parse(await all[MANIFEST_FILE].text());
     } catch {
       throw new Error("voices.json is not valid JSON");
     }
     manifest = cleanManifest(parsed);
-  } else if (files[DEFAULT_VOICE_FILE]) {
+  } else if (all[DEFAULT_VOICE_FILE]) {
     manifest = { default: DEFAULT_VOICE_FILE };
   } else {
     // No manifest: every voice file directly under voices/ becomes a voice, named by its file.
-    const found = Object.keys(files)
+    const found = Object.keys(all)
       .filter((path) => /^voices\/[^/]+\.safetensors$/i.test(path))
       .sort();
     if (found.length) manifest = { default: found[0] };
   }
-  if (!manifest.default && files[DEFAULT_VOICE_FILE]) manifest = { default: DEFAULT_VOICE_FILE, ...manifest };
+  if (!manifest.default && all[DEFAULT_VOICE_FILE]) manifest = { default: DEFAULT_VOICE_FILE, ...manifest };
 
-  for (const [voice, path] of Object.entries(manifest)) {
-    if (!files[path]) throw new Error(`voices.json points at ${path}, which is not in the folder`);
-    void voice;
+  for (const path of Object.values(manifest)) {
+    if (!all[path]) throw new Error(`voices.json points at ${path}, which is not in the folder`);
   }
   if (Object.keys(manifest).length === 0) {
     throw new Error(`the folder has no voice file (${DEFAULT_VOICE_FILE} or voices.json)`);
+  }
+
+  // Keep only what the runtime opens: its config, tokenizer, the chosen weights and the voices
+  // the manifest names.
+  const keep = new Set([...REQUIRED_FILES, weights, DEFAULT_VOICE_FILE, ...Object.values(manifest)]);
+  const files = {};
+  let bytes = 0;
+  for (const path of keep) {
+    if (!all[path]) continue;
+    files[path] = all[path];
+    bytes += all[path].size || 0;
   }
 
   return {
@@ -86,6 +105,6 @@ export async function collectModelFiles(fileList) {
     voices: manifest,
     defaultVoice: "default" in manifest ? "default" : Object.keys(manifest)[0],
     weights,
-    bytes: entries.reduce((total, file) => total + (file.size || 0), 0)
+    bytes
   };
 }

@@ -40,6 +40,7 @@ describe("background.js", () => {
   let created;
   let revoked;
   const realGetModel = store.getModel;
+  const realAllVoices = store.allVoices;
   const realCreateObjectURL = URL.createObjectURL;
   const realRevokeObjectURL = URL.revokeObjectURL;
 
@@ -51,6 +52,7 @@ describe("background.js", () => {
     resetEngineLoader();
 
     store.getModel = async (name) => record(name);
+    store.allVoices = async () => [];
     browser.storage.local.seed("settings", { modelName: "test-model" });
 
     created = [];
@@ -67,6 +69,7 @@ describe("background.js", () => {
     timers.uninstall();
     resetEngineLoader();
     store.getModel = realGetModel;
+    store.allVoices = realAllVoices;
     URL.createObjectURL = realCreateObjectURL;
     URL.revokeObjectURL = realRevokeObjectURL;
     delete globalThis.browser;
@@ -371,8 +374,53 @@ describe("background.js", () => {
     assert.equal(state.model.source, "imported");
     assert.equal(state.model.modelDir, "test-model");
     assert.deepEqual(state.model.voices, ["default", "Anna"]);
+    assert.deepEqual(state.model.modelVoices, ["default", "Anna"]);
+    assert.deepEqual(state.model.library, []);
     assert.equal(state.model.defaultVoice, "default");
     assert.deepEqual(state.model.missing, []);
+  });
+
+  test("library voices are listed, merged into the spec, and marked when shadowed", async () => {
+    store.allVoices = async () => [
+      { name: "Zoey", blob: new Blob(["zoey"]), bytes: 4, language: "en", description: "Playful" },
+      { name: "default", blob: new Blob(["other"]), bytes: 5 }
+    ];
+    const loader = makeEngine({ chunks: [pcm(240)] });
+    setEngineLoader(loader);
+
+    await loadBackground();
+    const before = await send({ type: "get-state" });
+    assert.deepEqual(before.model.voices, ["default", "Anna", "Zoey"]);
+    assert.deepEqual(
+      before.model.library.map((voice) => [voice.name, voice.shadowed]),
+      [
+        ["Zoey", false],
+        ["default", true]
+      ]
+    );
+    assert.equal(before.model.library[0].language, "en");
+
+    speakViaMenu("hello");
+    await flush();
+
+    assert.deepEqual(Object.keys(loader.options.model.voices), ["default", "Anna", "Zoey"]);
+    assert.match(loader.options.model.voices.Zoey, /^blob:test\//);
+    assert.match(loader.options.model.voices.default, /^blob:test\//);
+  });
+
+  test("a preview can speak with a voice that is not the saved one", async () => {
+    const loader = makeEngine({ chunks: [pcm(240)], wait: true });
+    setEngineLoader(loader);
+
+    await loadBackground();
+    await send({ type: "speak", text: "preview", voice: "Anna" });
+    await flush();
+
+    assert.equal(loader.engine.calls[0].options.voice, "Anna");
+    assert.equal(browser.__storage.get("settings").voice ?? "default", "default", "not saved");
+
+    await send({ type: "stop" });
+    await flush();
   });
 
   test("a fresh install says no model is imported, and speaking explains it", async () => {

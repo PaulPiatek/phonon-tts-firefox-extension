@@ -28,6 +28,30 @@ body {
 }
 .warning code { background: #fee2e2; border-radius: 3px; padding: 0 3px; }
 
+.voice-list { max-height: 280px; overflow-y: auto; margin-top: 10px; border-top: 1px solid #eee; }
+.voice-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid #f1f1f1;
+}
+.voice-main { min-width: 0; flex: 1; }
+.voice-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.badge {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .04em;
+  background: #eef2ff; color: #3730a3; border-radius: 4px; padding: 1px 5px;
+}
+.badge.model { background: #ecfdf5; color: #047857; }
+.badge.shadowed { background: #fef3c7; color: #92400e; }
+.voice-meta { color: #999; font-size: 11px; }
+.voice-desc { color: #666; font-size: 11px; margin-top: 2px; }
+.voice-actions { display: flex; gap: 4px; flex: 0 0 auto; }
+button.mini {
+  flex: 0 0 auto; padding: 4px 7px; font-size: 11px; border-radius: 5px;
+  background: #eef2ff; color: #1e3a8a;
+}
+button.mini.ghost { background: #f2f2f2; color: #333; }
+button.mini.danger { background: #fef2f2; color: #991b1b; padding: 4px 8px; }
+button.mini:disabled { opacity: .45; cursor: default; }
+
 label { display: block; margin: 14px 16px 4px; font-size: 12px; color: #555; }
 .card label { margin-left: 0; margin-right: 0; }
 label.muted { opacity: .45; }

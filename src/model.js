@@ -1,22 +1,36 @@
-// Where the checkpoint is: a folder the user picked in the options page, validated by
-// model-files.js and stored in IndexedDB by store.js. There is no bundled model, so until one
-// is imported there is nothing to speak with.
+// Where the checkpoint and its voices are: one model record plus a global voice library, both
+// imported through the options page and stored in IndexedDB (see store.js). There is no bundled
+// model, so until one is imported there is nothing to speak with.
 //
 // The runtime only takes URLs, so `buildSpec` turns the stored blobs into `blob:` URLs. That
 // has to happen in the background page: a blob URL dies with the document that created it.
 
+function voiceNames(record) {
+  return Object.keys(record.voices ?? {});
+}
+
 /**
- * Describe the imported checkpoint, without making any URLs. Cheap enough for the options
- * page to call on every visit.
+ * Describe the imported checkpoint and the voices that can speak with it. The model's own
+ * voices win over a library voice with the same name (every checkpoint has `default`).
+ * No URLs are made here; this is cheap enough for the options page to call on every visit.
  *
  * @param {object} options
  * @param {object} options.settings
- * @param {{ getModel: (name: string) => Promise<object | null> }} options.store
- * @returns {Promise<{ source: 'none' | 'imported', modelDir: string, voices: string[], defaultVoice: string | null, record?: object }>}
+ * @param {{ getModel: (name: string) => Promise<object | null>, allVoices?: () => Promise<object[]> }} options.store
  */
 export async function describeModel({ settings, store }) {
   if (!settings.modelName) {
-    return { source: "none", modelDir: "", voices: [], defaultVoice: null };
+    const library = store
+      ? ((await store.allVoices?.()) ?? []).filter((voice) => voice?.name && voice.blob)
+      : [];
+    return {
+      source: "none",
+      modelDir: "",
+      voices: [],
+      modelVoices: [],
+      library,
+      defaultVoice: null
+    };
   }
   if (!store) throw new Error("imported models are not available in this browser");
 
@@ -27,19 +41,27 @@ export async function describeModel({ settings, store }) {
     );
   }
 
-  const voices = Object.keys(record.voices ?? {});
-  if (voices.length === 0) throw new Error(`the imported model '${record.name}' has no voice file`);
-  const defaultVoice =
-    settings.voice && record.voices[settings.voice]
-      ? settings.voice
-      : record.voices[record.defaultVoice]
-        ? record.defaultVoice
-        : voices[0];
+  const modelVoices = voiceNames(record);
+  if (modelVoices.length === 0) throw new Error(`the imported model '${record.name}' has no voice file`);
+
+  const library = ((await store.allVoices?.()) ?? []).filter((voice) => voice?.name && voice.blob);
+  const merged = [...modelVoices];
+  for (const voice of library) {
+    if (!merged.includes(voice.name)) merged.push(voice.name);
+  }
+
+  const defaultVoice = merged.includes(settings.voice)
+    ? settings.voice
+    : record.voices[record.defaultVoice]
+      ? record.defaultVoice
+      : merged[0];
 
   return {
     source: "imported",
     modelDir: record.name,
-    voices,
+    voices: merged,
+    modelVoices,
+    library,
     defaultVoice,
     record
   };
@@ -66,8 +88,15 @@ export function buildSpec(model) {
     return value;
   };
 
+  // Model voices first; a library voice with the same name is shadowed.
   const voices = {};
   for (const [name, path] of Object.entries(record.voices)) voices[name] = url(path);
+  for (const voice of model.library ?? []) {
+    if (voices[voice.name]) continue;
+    const value = URL.createObjectURL(voice.blob);
+    blobUrls.push(value);
+    voices[voice.name] = value;
+  }
 
   return {
     blobUrls,

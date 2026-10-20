@@ -128,4 +128,32 @@ describe("collectModelFiles", () => {
     assert.equal(record.name, "imported-model");
     assert.ok(record.files["config.json"]);
   });
+
+  test("keeps only the files the runtime opens when a whole repo was downloaded", async () => {
+    const record = await collectModelFiles([
+      config,
+      tokenizer,
+      weights,
+      file("m/model.q4k.gguf", "q4k"),
+      file("m/model.safetensors", "f32"),
+      file("m/tokenizer.model", "spm"),
+      file("m/README.md", "readme"),
+      file("m/.gitattributes", "attrs"),
+      voice
+    ]);
+    assert.deepEqual(Object.keys(record.files).sort(), [
+      "config.json",
+      "default-voice.safetensors",
+      "model.q8.gguf",
+      "tokenizer.json"
+    ]);
+    assert.equal(record.bytes, 2 + 2 + 10 + 11, "the ignored files do not count");
+  });
+
+  test("a q4k-only download is refused with an explanation", async () => {
+    await assert.rejects(
+      collectModelFiles([config, tokenizer, file("m/model.q4k.gguf", "q4k"), voice]),
+      /q4k.*runtime loads model\.q8\.gguf or model\.safetensors/
+    );
+  });
 });
