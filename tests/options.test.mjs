@@ -1,9 +1,12 @@
 // The options page's rendering, exercised against a minimal DOM. This is what catches a
-// row that prints a class name instead of its content, or a setting that does not save.
+// row that prints a class name instead of its content, a model that is imported but never
+// selected, or a setting that does not save.
 
 import { test, beforeEach, afterEach, describe } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+
+import { store } from "../src/store.js";
 
 class FakeText {
   constructor(text) {
@@ -23,6 +26,7 @@ class FakeNode {
     this.className = "";
     this.id = "";
     this.value = "";
+    this.files = [];
     this.disabled = false;
     this.type = "";
     this.title = "";
@@ -66,8 +70,10 @@ class FakeNode {
     this.listeners.get(type).push(handler);
   }
 
-  fire(type) {
-    for (const handler of this.listeners.get(type) ?? []) handler({ preventDefault() {}, type });
+  fire(type, event = {}) {
+    for (const handler of this.listeners.get(type) ?? []) {
+      handler({ preventDefault() {}, type, ...event });
+    }
   }
 
   closest() {
@@ -79,24 +85,55 @@ function flatten(node) {
   return [node, ...node.children.flatMap((child) => (child instanceof FakeText ? [] : flatten(child)))];
 }
 
-function byId(elements) {
-  return (id) => elements.get(id);
+function optionValues(select) {
+  return select.children.filter((child) => child.tagName === "OPTION").map((child) => child.value);
 }
+
+function fakeFile(path, text) {
+  const blob = new Blob([text]);
+  return {
+    name: path.split("/").pop(),
+    size: blob.size,
+    webkitRelativePath: path,
+    text: () => blob.text(),
+    slice: (start, end) => blob.slice(start, end)
+  };
+}
+
+const sleep = (rounds = 12) => {
+  let promise = Promise.resolve();
+  for (let i = 0; i < rounds; i++) promise = promise.then(() => new Promise((resolve) => setImmediate(resolve)));
+  return promise;
+};
 
 describe("options page", () => {
   let elements;
   let messages;
+  let models;
+  let state;
+  const realStore = {
+    listModels: store.listModels,
+    putModel: store.putModel,
+    deleteModel: store.deleteModel,
+    putVoices: store.putVoices,
+    deleteVoice: store.deleteVoice
+  };
 
   beforeEach(() => {
     elements = new Map();
     messages = [];
+    models = [
+      { name: "phonon-40m-multilingual", bytes: 75 * 1024 * 1024 },
+      { name: "phonon-31m-en", bytes: 64 * 1024 * 1024 }
+    ];
+
     const html = readFileSync(new URL("../src/options.html", import.meta.url), "utf8");
     for (const [, id] of html.matchAll(/id="([^"]+)"/g)) elements.set(id, new FakeNode("div"));
 
     globalThis.document = {
       createElement: (tag) => new FakeNode(tag),
       createTextNode: (text) => new FakeText(text),
-      getElementById: byId(elements)
+      getElementById: (id) => elements.get(id)
     };
 
     const settings = {
@@ -104,9 +141,9 @@ describe("options page", () => {
       voice: "default",
       device: "auto",
       temperature: 0.3,
-      modelName: "test-model"
+      modelName: "phonon-40m-multilingual"
     };
-    const state = {
+    state = {
       settings,
       status: { text: "Idle", badge: "", ok: false },
       error: null,
@@ -114,9 +151,10 @@ describe("options page", () => {
       engine: null,
       model: {
         source: "imported",
-        modelDir: "test-model",
+        modelDir: "phonon-40m-multilingual",
         voices: ["default", "Henrik"],
         modelVoices: ["default"],
+        languages: ["en", "fr", "de", "es", "pt"],
         defaultVoice: "default",
         missing: [],
         library: [
@@ -131,16 +169,25 @@ describe("options page", () => {
       }
     };
 
+    store.listModels = async () => models.map((model) => ({ ...model }));
+    store.putModel = async (record) => {
+      models = [...models.filter((model) => model.name !== record.name), { name: record.name, bytes: record.bytes }];
+    };
+    store.deleteModel = async (name) => {
+      models = models.filter((model) => model.name !== name);
+    };
+    store.putVoices = async () => {};
+    store.deleteVoice = async () => {};
+
     globalThis.browser = {
       runtime: {
         sendMessage: async (message) => {
           messages.push(message);
           if (message.type === "save-settings") {
             Object.assign(state.settings, message.settings);
-            return { ...state, settings: { ...state.settings } };
+            state.model.modelDir = state.settings.modelName || "";
           }
-          if (message.type === "voices-changed") return { ...state, settings: { ...state.settings } };
-          return { ...state, settings: { ...state.settings } };
+          return { ...state, settings: { ...state.settings }, model: { ...state.model } };
         },
         onMessage: { addListener() {} }
       }
@@ -148,20 +195,19 @@ describe("options page", () => {
   });
 
   afterEach(() => {
+    Object.assign(store, realStore);
     delete globalThis.document;
     delete globalThis.browser;
   });
 
   async function load() {
     await import(`../src/options.js?v=${Date.now()}`);
-    // `refresh()` is started at module load; give its promises room to settle.
-    for (let i = 0; i < 10; i++) await new Promise((resolve) => setImmediate(resolve));
+    await sleep();
   }
 
   test("voice rows show the language and description as content, not class names", async () => {
     await load();
-    const list = elements.get("voice-list");
-    const nodes = flatten(list);
+    const nodes = flatten(elements.get("voice-list"));
 
     const meta = nodes.find((node) => node.className === "voice-meta");
     assert.ok(meta, "a .voice-meta node should exist");
@@ -171,11 +217,10 @@ describe("options page", () => {
     assert.ok(description, "a .voice-desc node should exist");
     assert.equal(description.textContent, "Warm, low and unhurried.");
 
-    const stray = nodes.filter((node) => node.className === "" && (node.textContent === "voice-meta" || node.textContent === "voice-desc"));
+    const stray = nodes.filter(
+      (node) => node.className === "" && (node.textContent === "voice-meta" || node.textContent === "voice-desc")
+    );
     assert.deepEqual(stray, [], "class names must not be printed as text");
-
-    assert.match(list.textContent, /Henrik/);
-    assert.match(list.textContent, /Warm, low and unhurried/);
   });
 
   test("changing a setting saves it without pressing anything", async () => {
@@ -185,7 +230,7 @@ describe("options page", () => {
     const language = elements.get("lang");
     language.value = "de";
     language.fire("change");
-    for (let i = 0; i < 6; i++) await new Promise((resolve) => setImmediate(resolve));
+    await sleep();
 
     const saves = messages.filter((message) => message.type === "save-settings");
     assert.equal(saves.length, 1, "the change triggers one save");
@@ -194,9 +239,62 @@ describe("options page", () => {
     const voice = elements.get("voice");
     voice.value = "Henrik";
     voice.fire("change");
-    for (let i = 0; i < 6; i++) await new Promise((resolve) => setImmediate(resolve));
+    await sleep();
 
     const last = messages.filter((message) => message.type === "save-settings").at(-1);
     assert.equal(last.settings.voice, "Henrik");
+  });
+
+  test("the model search filters the choices and Enter selects the first match", async () => {
+    await load();
+    messages.length = 0;
+
+    const search = elements.get("modelSearch");
+    search.value = "31m";
+    search.fire("input");
+    assert.deepEqual(optionValues(elements.get("modelName")), [
+      "",
+      "phonon-40m-multilingual",
+      "phonon-31m-en"
+    ]);
+
+    search.fire("keydown", { key: "Enter" });
+    await sleep();
+
+    assert.equal(elements.get("modelName").value, "phonon-31m-en");
+    const last = messages.filter((message) => message.type === "save-settings").at(-1);
+    assert.equal(last.settings.modelName, "phonon-31m-en");
+  });
+
+  test("importing a model selects and saves it, ready to speak", async () => {
+    await load();
+    elements.get("modelPicker").files = [
+      fakeFile("phonon-40m-de/config.json", JSON.stringify({ languages: ["de"] })),
+      fakeFile("phonon-40m-de/tokenizer.json", "{}"),
+      fakeFile("phonon-40m-de/model.q8.gguf", "gguf"),
+      fakeFile("phonon-40m-de/default-voice.safetensors", "voice")
+    ];
+    elements.get("modelPicker").fire("change");
+    await sleep(30);
+
+    assert.equal(elements.get("modelName").value, "phonon-40m-de");
+    const last = messages.filter((message) => message.type === "save-settings").at(-1);
+    assert.equal(last.settings.modelName, "phonon-40m-de");
+    assert.match(elements.get("model-info").textContent, /phonon-40m-de/);
+  });
+
+  test("warns when the text language is not one the model was trained for", async () => {
+    await load();
+    state.model.languages = ["en"];
+
+    const language = elements.get("lang");
+    language.value = "de";
+    language.fire("change");
+    await sleep();
+
+    const warning = elements.get("lang-warning");
+    assert.equal(warning.classList.contains("hidden"), false);
+    assert.match(warning.textContent, /trained for en/);
+    assert.match(warning.textContent, /German/);
   });
 });

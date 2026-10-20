@@ -57,6 +57,14 @@
 - **Settings auto-save.** There is no Save button; selects and the temperature slider call
   `saveForm` on `change`. `refresh`/`saveForm` share a render sequence so a slow, stale reply
   cannot overwrite the form (this bit the post-import model selection).
+- **Rebuild a `<select>`'s options before setting its value.** Assigning a value that has no
+  matching option silently leaves it empty; that is why an imported model used to stay
+  unselected. `renderModelChoices` is called first and the value set after.
+- **The options page uses the exported `store` object, not named imports,** so tests can swap
+  its methods. Keep it that way; the fake-DOM tests in `tests/options.test.mjs` depend on it.
+- **A model's languages come from its imported `config.json` blob** (`describeModel`), so the
+  page can warn before anything is loaded. The language is a load option: changing it must
+  dispose the engine (it is in `needsReload`) and rebuild on the next Speak.
 - **Voice names come from the catalog's `voices.jsonl`, not the file names.** Catalog files are
   named by voice id (`NbpkqMVS3CJeq2j8.safetensors`), so dropping the listing loses only the
   friendly names. `voices.json` (the model manifest) is accepted as a fallback.

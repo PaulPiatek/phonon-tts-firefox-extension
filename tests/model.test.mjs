@@ -71,6 +71,28 @@ describe("describeModel", () => {
     );
   });
 
+  test("reads the model's languages from its config", async () => {
+    const base = record();
+    const model = await describeModel({
+      settings: { modelName: "m" },
+      store: {
+        getModel: async () => ({
+          ...base,
+          files: { ...base.files, "config.json": new Blob([JSON.stringify({ languages: ["en", "de"] })]) }
+        })
+      }
+    });
+    assert.deepEqual(model.languages, ["en", "de"]);
+  });
+
+  test("an unreadable config just means no language list", async () => {
+    const model = await describeModel({
+      settings: { modelName: "m" },
+      store: { getModel: async (name) => record(name) }
+    });
+    assert.deepEqual(model.languages, [], "the test record's config is not JSON");
+  });
+
   test("a deleted imported model is an error worth showing", async () => {
     const store = { getModel: async () => null };
     await assert.rejects(

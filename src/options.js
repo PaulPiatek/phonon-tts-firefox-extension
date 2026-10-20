@@ -1,6 +1,6 @@
 import { collectModelFiles } from "./model-files.js";
 import { collectVoiceFiles } from "./voice-files.js";
-import { deleteModel, deleteVoice, listModels, putModel, putVoices } from "./store.js";
+import { store } from "./store.js";
 
 const api = globalThis.browser ?? globalThis.chrome;
 const SAMPLES = {
@@ -16,11 +16,13 @@ const $ = (id) => document.getElementById(id);
 const els = {
   status: $("status"),
   modelName: $("modelName"),
+  modelSearch: $("modelSearch"),
   importModel: $("importModel"),
   deleteModel: $("deleteModel"),
   modelPicker: $("modelPicker"),
   modelInfo: $("model-info"),
   missing: $("missing"),
+  langWarning: $("lang-warning"),
   importVoices: $("importVoices"),
   importVoiceFolder: $("importVoiceFolder"),
   voicePicker: $("voicePicker"),
@@ -40,6 +42,17 @@ const els = {
 
 let imported = [];
 let sampleLang = null;
+let modelQuery = "";
+let currentSettings = null;
+
+const LANG_NAMES = {
+  en: "English",
+  fr: "French",
+  de: "German",
+  es: "Spanish",
+  pt: "Portuguese",
+  none: "as written"
+};
 
 function mb(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(bytes > 10 * 1024 * 1024 ? 0 : 1)} MB`;
@@ -131,7 +144,7 @@ function voiceRow(model, name, kind, voice) {
     remove.addEventListener("click", async () => {
       if (!confirm(`Delete the voice "${name}" from this browser?`)) return;
       const wasSelected = els.voice.value === name;
-      await deleteVoice(name);
+      await store.deleteVoice(name);
       let state = await send({ type: "voices-changed" });
       if (wasSelected) {
         els.voice.value = state.model.modelVoices.includes("default") ? "default" : state.model.modelVoices[0] ?? "";
@@ -188,22 +201,41 @@ function engineSummary(engine) {
 }
 
 function renderModelChoices(settings) {
+  currentSettings = settings;
+  const query = modelQuery.trim().toLowerCase();
+  const matches = imported.filter((model) => !query || model.name.toLowerCase().includes(query));
+  const selected = settings.modelName || "";
+
+  // The current selection stays visible even when the filter excludes it, so the select is
+  // never blank while the user is typing.
+  const shown = [...matches];
+  if (selected && !shown.some((model) => model.name === selected)) {
+    const current = imported.find((model) => model.name === selected);
+    if (current) shown.unshift(current);
+  }
+
   els.modelName.replaceChildren();
   const placeholder = node("option", imported.length === 0 ? "No model imported" : "Choose a model…");
   placeholder.value = "";
   placeholder.disabled = true;
   els.modelName.append(placeholder);
-  for (const model of imported) {
+  for (const model of shown) {
     const option = node("option", `Imported: ${model.name} (${mb(model.bytes)})`);
     option.value = model.name;
     els.modelName.append(option);
   }
-  if (settings.modelName && !imported.some((model) => model.name === settings.modelName)) {
-    const option = node("option", `Missing: ${settings.modelName}`);
-    option.value = settings.modelName;
+  if (selected && !imported.some((model) => model.name === selected)) {
+    const option = node("option", `Missing: ${selected}`);
+    option.value = selected;
     els.modelName.append(option);
   }
-  els.modelName.value = settings.modelName || "";
+  if (shown.length === 0 && query) {
+    const option = node("option", "No models match the search");
+    option.value = "";
+    option.disabled = true;
+    els.modelName.append(option);
+  }
+  els.modelName.value = selected;
   els.deleteModel.disabled = !els.modelName.value;
 }
 
@@ -235,10 +267,22 @@ function render(state) {
   els.voice.value = model.voices.includes(settings.voice) ? settings.voice : model.defaultVoice ?? "";
 
   const source = model.source === "imported" ? "imported, in browser storage" : "no model imported";
+  const languages = Array.isArray(model.languages) ? model.languages : [];
   els.modelInfo.textContent =
     model.source === "none"
       ? "No model imported"
-      : `${model.modelDir} · ${source} · ${model.voices.length} voice${model.voices.length === 1 ? "" : "s"}`;
+      : `${model.modelDir} · ${source} · ${model.voices.length} voice${model.voices.length === 1 ? "" : "s"}` +
+        (languages.length ? ` · languages: ${languages.join(", ")}` : "");
+
+  if (languages.length > 0 && settings.lang !== "none" && !languages.includes(settings.lang)) {
+    els.langWarning.classList.remove("hidden");
+    els.langWarning.textContent =
+      `${model.modelDir} was trained for ${languages.join(", ")}, not ${LANG_NAMES[settings.lang] ?? settings.lang}. ` +
+      "Text will be normalized as the selected language and may sound wrong; pick a supported language or another checkpoint.";
+  } else {
+    els.langWarning.classList.add("hidden");
+    els.langWarning.textContent = "";
+  }
 
   renderVoices(model);
 
@@ -276,7 +320,7 @@ let renderSeq = 0;
 
 async function refresh() {
   const seq = ++renderSeq;
-  imported = await listModels().catch(() => []);
+  imported = await store.listModels().catch(() => []);
   const state = await send({ type: "get-state" });
   // A save or import that started later must win over this slower reply.
   if (seq === renderSeq) render(state);
@@ -296,11 +340,15 @@ els.temperature.addEventListener("input", () => {
   els.temperatureValue.textContent = Number(els.temperature.value).toFixed(2);
 });
 
-els.lang.addEventListener("change", () => {
+els.lang.addEventListener("change", async () => {
   const previous = sampleLang ? SAMPLES[sampleLang] : "";
   if (!els.preview.value || els.preview.value === previous) els.preview.value = SAMPLES[els.lang.value] || SAMPLES.en;
   sampleLang = els.lang.value;
-  saveForm();
+  const state = await saveForm();
+  if (state?.ok !== false) {
+    const name = LANG_NAMES[els.lang.value] ?? els.lang.value;
+    showStatus(`Language: ${name}. The model reloads on the next Speak.`, "ok");
+  }
 });
 
 els.voice.addEventListener("change", () => saveForm());
@@ -311,6 +359,23 @@ els.modelName.addEventListener("change", async () => {
   els.deleteModel.disabled = !els.modelName.value;
   const state = await saveForm();
   if (state?.ok !== false) showStatus("Model switched; it loads on the next Speak.", "ok");
+});
+
+els.modelSearch.addEventListener("input", () => {
+  modelQuery = els.modelSearch.value;
+  if (currentSettings) renderModelChoices(currentSettings);
+});
+
+els.modelSearch.addEventListener("keydown", async (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  const query = modelQuery.trim().toLowerCase();
+  if (!query) return;
+  const match = imported.find((model) => model.name.toLowerCase().includes(query));
+  if (!match) return;
+  els.modelName.value = match.name;
+  const state = await saveForm();
+  if (state?.ok !== false) showStatus(`Model: ${match.name}. It loads on the next Speak.`, "ok");
 });
 
 els.form.addEventListener("submit", (event) => {
@@ -330,15 +395,17 @@ els.modelPicker.addEventListener("change", async () => {
   try {
     const record = await collectModelFiles(files);
     showStatus(`Copying ${record.name} (${mb(record.bytes)}) into browser storage…`);
-    await putModel(record);
-    imported = await listModels();
-    // Select the new model right away, including on a fresh install where the dropdown
-    // had nothing selected before.
+    await store.putModel(record);
+    imported = await store.listModels();
+    // Rebuild the options before selecting: setting a <select> to a value it does not have
+    // yet silently leaves it empty, which is how imported models used to go unselected.
+    modelQuery = "";
+    els.modelSearch.value = "";
+    renderModelChoices({ ...(currentSettings ?? {}), modelName: record.name });
     els.modelName.value = record.name;
     const state = await saveForm({ quiet: true });
     if (state?.settings?.modelName !== record.name) {
-      // Something re-rendered the select in between; do it once more, now that lists agree.
-      imported = await listModels();
+      renderModelChoices({ ...(currentSettings ?? {}), modelName: record.name });
       els.modelName.value = record.name;
       await saveForm({ quiet: true });
     }
@@ -357,8 +424,9 @@ els.deleteModel.addEventListener("click", async () => {
   if (!confirm(`Delete the imported model "${name}" from browser storage?`)) return;
   els.deleteModel.disabled = true;
   try {
-    await deleteModel(name);
-    imported = await listModels();
+    await store.deleteModel(name);
+    imported = await store.listModels();
+    renderModelChoices({ ...(currentSettings ?? {}), modelName: "" });
     els.modelName.value = "";
     await saveForm({ quiet: true });
     showStatus(`Deleted ${name}. Import a model to speak again.`, "ok");
@@ -374,7 +442,7 @@ async function importVoices(files) {
   try {
     const { voices, skipped } = await collectVoiceFiles(files);
     showStatus(`Storing ${voices.length} voice${voices.length === 1 ? "" : "s"}…`);
-    await putVoices(voices);
+    await store.putVoices(voices);
     // The engine holds the voice list from when it loaded; make it rebuild with the new ones.
     render(await send({ type: "voices-changed" }));
     const extra = skipped.length ? `, ${skipped.length} file${skipped.length === 1 ? "" : "s"} skipped` : "";

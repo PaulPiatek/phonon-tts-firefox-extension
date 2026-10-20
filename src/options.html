@@ -19,6 +19,9 @@
       <label>Use
         <select id="modelName"></select>
       </label>
+      <label>Search
+        <input type="search" id="modelSearch" placeholder="Filter models…" autocomplete="off" spellcheck="false">
+      </label>
       <div class="row">
         <button type="button" class="primary" id="importModel">Import a model folder…</button>
         <button type="button" class="ghost" id="deleteModel">Delete</button>
@@ -65,6 +68,7 @@
         </select>
       </label>
       <div class="hint">Numbers, dates and symbols are read out the way a speaker of this language says them. Pick the language of the text you select.</div>
+      <div id="lang-warning" class="warning hidden"></div>
 
       <label>Voice
         <select id="voice"></select>

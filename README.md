@@ -92,7 +92,8 @@ into the extension's own storage once; after that they work offline. **Delete** 
 and importing again replaces it, so re-import after replacing the files.
 
 The model name is the folder name, so two checkpoints from differently named folders can be
-switched between in the dropdown.
+switched between in the dropdown. With several imported, the **Search** box filters the list —
+press <kbd>Enter</kbd> to select the first match, or pick one from the dropdown.
 
 Browsers never give an extension a durable path to a folder on disk: a picker hands over the
 *contents*. Copying them into the extension's storage is what makes "pick once, use forever"
@@ -161,7 +162,9 @@ Click the button again, or right-click → **🔇 Stop Phonon**, to stop.
 
 The **Language** setting is the language of the *text*, not of the UI: it decides how numbers,
 dates and symbols are read. Phonon 40m multilingual speaks English, French, German, Spanish and
-Portuguese. Use **None** to pass text through as written.
+Portuguese. Use **None** to pass text through as written. Changing it reloads the model on the
+next Speak (the language is fixed when the model loads). The Model card lists the languages the
+checkpoint was trained for and warns when the selected one is not among them.
 
 ## Diagnostics
 

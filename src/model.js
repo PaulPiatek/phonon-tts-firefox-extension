@@ -9,6 +9,18 @@ function voiceNames(record) {
   return Object.keys(record.voices ?? {});
 }
 
+/** The languages from the checkpoint's config, when its blob is readable. */
+async function readLanguages(record) {
+  const blob = record.files?.["config.json"];
+  if (!blob || typeof blob.text !== "function") return [];
+  try {
+    const config = JSON.parse(await blob.text());
+    return Array.isArray(config.languages) ? config.languages.filter((language) => typeof language === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Describe the imported checkpoint and the voices that can speak with it. The model's own
  * voices win over a library voice with the same name (every checkpoint has `default`).
@@ -29,6 +41,7 @@ export async function describeModel({ settings, store }) {
       voices: [],
       modelVoices: [],
       library,
+      languages: [],
       defaultVoice: null
     };
   }
@@ -62,6 +75,7 @@ export async function describeModel({ settings, store }) {
     voices: merged,
     modelVoices,
     library,
+    languages: await readLanguages(record),
     defaultVoice,
     record
   };

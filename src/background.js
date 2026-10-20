@@ -360,6 +360,7 @@ async function describeState() {
       modelDir: settings.modelName,
       voices: [],
       modelVoices: [],
+      languages: [],
       library: [],
       defaultVoice: null
     };
@@ -375,6 +376,7 @@ async function describeState() {
       modelDir: model.modelDir,
       voices: model.voices,
       modelVoices: model.modelVoices ?? [],
+      languages: model.languages ?? [],
       library: (model.library ?? []).map((voice) => ({
         name: voice.name,
         bytes: voice.bytes ?? voice.blob?.size ?? 0,

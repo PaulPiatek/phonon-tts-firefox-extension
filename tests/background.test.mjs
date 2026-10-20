@@ -20,7 +20,7 @@ function record(name = "test-model") {
   return {
     name,
     files: {
-      "config.json": new Blob(["config"]),
+      "config.json": new Blob([JSON.stringify({ languages: ["en", "de"] })]),
       "tokenizer.json": new Blob(["tokenizer"]),
       "model.q8.gguf": new Blob(["weights"]),
       "default-voice.safetensors": new Blob(["voice"]),
@@ -262,6 +262,7 @@ describe("background.js", () => {
     assert.equal(loader.engine.calls.length, 2);
     assert.equal(loader.engine.disposed, 1);
     assert.equal(loader.engine.calls[1].text, "zweite");
+    assert.equal(loader.allOptions[1].lang, "de", "the reload uses the new text language");
     audio.contexts[1].sources[0].onended();
     await flush();
   });
@@ -378,6 +379,7 @@ describe("background.js", () => {
     assert.equal(state.model.modelDir, "test-model");
     assert.deepEqual(state.model.voices, ["default", "Anna"]);
     assert.deepEqual(state.model.modelVoices, ["default", "Anna"]);
+    assert.deepEqual(state.model.languages, ["en", "de"]);
     assert.deepEqual(state.model.library, []);
     assert.equal(state.model.defaultVoice, "default");
     assert.deepEqual(state.model.missing, []);
