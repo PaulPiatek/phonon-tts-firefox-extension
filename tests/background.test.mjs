@@ -125,6 +125,7 @@ describe("background.js", () => {
       voice: "Anna",
       device: "cpu",
       temperature: 0.6,
+      durationDelta: -0.25,
       modelName: "test-model"
     });
     const loader = makeEngine({ chunks: [pcm(240)] });
@@ -138,6 +139,7 @@ describe("background.js", () => {
     assert.equal(loader.options.quant, "q8");
     assert.equal(loader.options.device, "cpu");
     assert.equal(loader.options.cache, false);
+    assert.deepEqual(loader.options.conditions, { duration_delta: -0.25 });
     assert.match(loader.options.model.config, /^blob:test\//);
     assert.match(loader.options.model.weights.q8, /^blob:test\//);
     assert.equal(loader.options.model.defaultVoice, "Anna");
@@ -294,6 +296,26 @@ describe("background.js", () => {
     assert.equal(loader.engine.calls.at(-1).text, "zweite");
 
     audio.contexts.at(-1).sources[0]?.onended();
+    await flush();
+  });
+
+  test("changing the speaking rate rebuilds the model with the new conditioner", async () => {
+    const loader = makeEngine({ chunks: [pcm(240)] });
+    setEngineLoader(loader);
+
+    await loadBackground();
+    speakViaMenu("first");
+    await flush();
+    audio.contexts[0].sources[0].onended();
+    await flush();
+
+    await send({ type: "save-settings", settings: { durationDelta: 0.3, modelName: "test-model" } });
+    speakViaMenu("second");
+    await flush();
+
+    assert.equal(loader.engine.disposed, 1);
+    assert.deepEqual(loader.allOptions[1].conditions, { duration_delta: 0.3 });
+    audio.contexts[1].sources[0].onended();
     await flush();
   });
 

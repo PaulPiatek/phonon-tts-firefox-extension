@@ -137,6 +137,7 @@ describe("options page", () => {
       voice: "default",
       device: "auto",
       temperature: 0.3,
+      durationDelta: 0,
       modelName: "phonon-40m-multilingual"
     };
     state = {
@@ -246,6 +247,16 @@ describe("options page", () => {
 
     const last = messages.filter((message) => message.type === "save-settings").at(-1);
     assert.equal(last.settings.voice, "Henrik");
+
+    const rate = elements.get("rate");
+    rate.value = "-0.3";
+    rate.fire("input");
+    assert.equal(elements.get("rate-value").textContent, "-0.30");
+    rate.fire("change");
+    await sleep();
+
+    const lastRate = messages.filter((message) => message.type === "save-settings").at(-1);
+    assert.equal(lastRate.settings.durationDelta, -0.3);
   });
 
   test("the voice search filters by name, language or description", async () => {

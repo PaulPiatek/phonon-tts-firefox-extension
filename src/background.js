@@ -113,7 +113,8 @@ function needsReload(settings) {
   return (
     state.engineSettings.lang !== settings.lang ||
     state.engineSettings.modelName !== settings.modelName ||
-    state.engineSettings.device !== settings.device
+    state.engineSettings.device !== settings.device ||
+    state.engineSettings.durationDelta !== settings.durationDelta
   );
 }
 

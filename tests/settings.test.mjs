@@ -16,6 +16,7 @@ describe("normalizeSettings", () => {
       voice: "Anna",
       device: "webgpu",
       temperature: 0.75,
+      durationDelta: -0.25,
       modelName: "my-import"
     });
     assert.deepEqual(settings, {
@@ -23,6 +24,7 @@ describe("normalizeSettings", () => {
       voice: "Anna",
       device: "webgpu",
       temperature: 0.75,
+      durationDelta: -0.25,
       modelName: "my-import"
     });
   });
@@ -43,6 +45,15 @@ describe("normalizeSettings", () => {
     assert.equal(normalizeSettings({ temperature: -5 }).temperature, 0);
     assert.equal(normalizeSettings({ temperature: "hot" }).temperature, DEFAULTS.temperature);
     assert.equal(normalizeSettings({ temperature: null }).temperature, DEFAULTS.temperature);
+  });
+
+  test("keeps the speaking rate within the model's useful range", () => {
+    assert.equal(normalizeSettings({}).durationDelta, 0);
+    assert.equal(normalizeSettings({ durationDelta: -0.3 }).durationDelta, -0.3);
+    assert.equal(normalizeSettings({ durationDelta: 99 }).durationDelta, 0.5);
+    assert.equal(normalizeSettings({ durationDelta: -99 }).durationDelta, -0.5);
+    assert.equal(normalizeSettings({ durationDelta: "fast" }).durationDelta, 0);
+    assert.equal(normalizeSettings({ durationDelta: null }).durationDelta, 0);
   });
 
   test("ignores blank voices and non-string ones", () => {

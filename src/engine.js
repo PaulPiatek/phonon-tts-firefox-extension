@@ -27,6 +27,8 @@ export function loadEngine({ settings, spec, onProgress }) {
     quant: "q8",
     device: settings.device,
     cache: false,
+    // The model's own speed conditioner. Zero leaves the checkpoint's defaults untouched.
+    conditions: settings.durationDelta ? { duration_delta: settings.durationDelta } : undefined,
     onProgress
   });
 }

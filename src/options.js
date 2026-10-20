@@ -33,6 +33,8 @@ const els = {
   device: $("device"),
   temperature: $("temperature"),
   temperatureValue: $("temperature-value"),
+  rate: $("rate"),
+  rateValue: $("rate-value"),
   form: $("form"),
   preview: $("preview"),
   speak: $("speak"),
@@ -57,6 +59,12 @@ const LANG_NAMES = {
 
 function mb(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(bytes > 10 * 1024 * 1024 ? 0 : 1)} MB`;
+}
+
+function formatRate(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "0.00";
+  return `${number > 0 ? "+" : ""}${number.toFixed(2)}`;
 }
 
 function showStatus(text, kind) {
@@ -256,6 +264,8 @@ function render(state) {
   els.device.value = settings.device;
   els.temperature.value = String(settings.temperature);
   els.temperatureValue.textContent = Number(settings.temperature).toFixed(2);
+  els.rate.value = String(settings.durationDelta);
+  els.rateValue.textContent = formatRate(settings.durationDelta);
 
   els.voice.replaceChildren();
   for (const name of model.voices) {
@@ -316,6 +326,7 @@ function readForm() {
     voice: els.voice.value,
     device: els.device.value,
     temperature: Number(els.temperature.value),
+    durationDelta: Number(els.rate.value),
     modelName: els.modelName.value
   };
 }
@@ -344,6 +355,10 @@ els.temperature.addEventListener("input", () => {
   els.temperatureValue.textContent = Number(els.temperature.value).toFixed(2);
 });
 
+els.rate.addEventListener("input", () => {
+  els.rateValue.textContent = formatRate(els.rate.value);
+});
+
 els.lang.addEventListener("change", async () => {
   const previous = sampleLang ? SAMPLES[sampleLang] : "";
   if (!els.preview.value || els.preview.value === previous) els.preview.value = SAMPLES[els.lang.value] || SAMPLES.en;
@@ -358,6 +373,12 @@ els.lang.addEventListener("change", async () => {
 els.voice.addEventListener("change", () => saveForm());
 els.device.addEventListener("change", () => saveForm());
 els.temperature.addEventListener("change", () => saveForm());
+els.rate.addEventListener("change", async () => {
+  const state = await saveForm();
+  if (state?.ok !== false) {
+    showStatus(`Speaking rate: ${formatRate(els.rate.value)}. The model reloads on the next Speak.`, "ok");
+  }
+});
 
 els.modelName.addEventListener("change", async () => {
   els.deleteModel.disabled = !els.modelName.value;

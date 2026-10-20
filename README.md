@@ -18,8 +18,8 @@ model is WebAssembly in an extension worker instead of a local TTS backend.
 - **Runs on the CPU** by default, and on **WebGPU** when the browser hands out a real adapter
   (setting: `Auto`). On a typical laptop the CPU build is around 5× faster than real time,
   single-threaded.
-- **Options page** — import the model folder, import voices, language, device, temperature, and a
-  Speak button for trying a sentence.
+- **Options page** — import the model folder, import voices, language, device, temperature,
+  speaking rate, and a Speak button for trying a sentence.
 
 The model uses about 100 MB of memory while loaded. Firefox terminates idle extension
 background pages, so after a long pause the next click reloads the checkpoint (well under a
@@ -166,13 +166,19 @@ Portuguese. Use **None** to pass text through as written. Changing it reloads th
 next Speak (the language is fixed when the model loads). The Model card lists the languages the
 checkpoint was trained for and warns when the selected one is not among them.
 
+**Speaking rate** maps to the model's `duration_delta` conditioner: negative is faster, positive
+slower (the slider covers −0.5 to +0.5, with 0.0 as the checkpoint's default). Like the language,
+it is fixed when the model loads, so changing it reloads the model on the next Speak. Around
+±0.4 changes a five-second sentence by roughly a second; it adjusts duration and pacing, not
+pitch.
+
 ## Diagnostics
 
 - `npm test` — the Node test suite (settings, model spec, playback scheduling, and the
   background flow with a fake engine).
-- `npm run bench -- --model models/phonon-31m-en --voice Zoey` — loads a model through the wasm
-  build and writes `bench.wav`, printing load time and speed relative to real time. Useful to
-  check a download and a voice without the browser.
+- `npm run bench -- --model models/phonon-31m-en --voice Zoey --duration -0.3` — loads a model
+  through the wasm build and writes `bench.wav`, printing load time and speed relative to real
+  time. Useful to check a download, a voice and the speaking rate without the browser.
 - **Self-test page** — in `about:debugging`, find the extension and open
   `selftest.html` from its "Inspect" page, or visit
   `moz-extension://<uuid>/selftest.html`. It speaks one sentence through the real background

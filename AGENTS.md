@@ -68,6 +68,10 @@
 - **A model's languages come from its imported `config.json` blob** (`describeModel`), so the
   page can warn before anything is loaded. The language is a load option: changing it must
   dispose the engine (it is in `needsReload`) and rebuild on the next Speak.
+- **Speaking rate is the model's `duration_delta` conditioner**, passed at load as
+  `conditions: { duration_delta: x }` (negative faster, positive slower). It is also in
+  `needsReload`. The slider's −0.5…+0.5 range is empirical: ±0.4 moved a 5.2 s sentence to
+  4.4 s / 5.8 s; values past ±1 got less predictable, so do not widen it without listening.
 - **Voice names come from the catalog's `voices.jsonl`, not the file names.** Catalog files are
   named by voice id (`NbpkqMVS3CJeq2j8.safetensors`), so dropping the listing loses only the
   friendly names. `voices.json` (the model manifest) is accepted as a fallback.

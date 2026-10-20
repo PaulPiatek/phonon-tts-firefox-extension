@@ -20,6 +20,7 @@ function args(argv) {
     text: "Hello. Phonon is running inside your browser, with no server.",
     lang: "en",
     voice: "default",
+    duration: 0,
     out: join(root, "bench.wav")
   };
   for (let i = 0; i < argv.length; i++) {
@@ -36,6 +37,9 @@ function args(argv) {
         break;
       case "--voice":
         options.voice = value();
+        break;
+      case "--duration":
+        options.duration = Number(value());
         break;
       case "--out":
         options.out = resolve(value());
@@ -87,12 +91,14 @@ async function main() {
   const t0 = performance.now();
   const module = await WebAssembly.compile(wasmModule);
   await init({ module_or_path: module });
-  const model = await Model.load(weights, tokenizer, configJson, "q8", options.lang, "default", [], "cpu");
+  const conditions = options.duration ? [`duration_delta=${options.duration}`] : [];
+  const model = await Model.load(weights, tokenizer, configJson, "q8", options.lang, "default", conditions, "cpu");
   const voiceBytes = await readFile(join(options.model, voiceFile));
   const voiceIndex = model.add_voice(voiceBytes);
   await model.flush();
   console.log(
-    `loaded ${options.lang} in ${((performance.now() - t0) / 1000).toFixed(2)}s · ` +
+    `loaded ${options.lang}${options.duration ? ` duration_delta=${options.duration}` : ""} ` +
+      `in ${((performance.now() - t0) / 1000).toFixed(2)}s · ` +
       `${model.sample_rate()} Hz · voice ${options.voice} (${voiceFile})`
   );
 
