@@ -33,7 +33,7 @@ The extension ships **no model**: you download the files and import them once.
 
 The multilingual 40m repo is gated, so accept its terms on
 [huggingface.co/gradium/phonon-40m-multilingual](https://huggingface.co/gradium/phonon-40m-multilingual)
-first. Then download these four files into one folder:
+first. The extension reads only these four files:
 
 | File | Size |
 | --- | --- |
@@ -42,7 +42,30 @@ first. Then download these four files into one folder:
 | `model.q8.gguf` | 74.6 MB |
 | `default-voice.safetensors` | 256 KB |
 
-Either download them by hand, or let the script do it (and write `voices.json` for you):
+**With the Hugging Face CLI.** Install it with `pip install -U huggingface_hub`, or run it without
+installing via [`uvx`](https://docs.astral.sh/uv/guides/tools/). Log in once with `hf auth login`
+(or set `HF_TOKEN`), since the model is gated.
+
+Download the whole repository (~260 MB — it also contains `model.q4k.gguf`, `model.safetensors`
+and `tokenizer.model`, which the extension ignores):
+
+```powershell
+hf download gradium/phonon-40m-multilingual --local-dir models/phonon-40m-multilingual
+```
+
+Or download only the four files the extension reads (~75 MB):
+
+```powershell
+hf download gradium/phonon-40m-multilingual `
+  config.json tokenizer.json model.q8.gguf default-voice.safetensors `
+  --local-dir models/phonon-40m-multilingual
+```
+
+`uvx` works the same way: `uvx hf download gradium/phonon-40m-multilingual ...` (the `hf` PyPI
+package is the CLI; `uvx --from huggingface_hub hf ...` is equivalent). It caches the tool, so
+later runs are instant.
+
+**Without the CLI**, the bundled script downloads the same four files and writes `voices.json`:
 
 ```powershell
 $env:HF_TOKEN = "hf_..."        # read token from https://huggingface.co/settings/tokens
@@ -53,27 +76,12 @@ npm run fetch-model             # -> models/phonon-40m-multilingual
 The script skips files that are already there, so it is safe to re-run. `npm run fetch-model --
 --help` lists the options.
 
-**Extra voices** (optional; the catalog has ~100):
-
-```powershell
-npm run fetch-model -- --voice Zoey --voice Juniper
-```
-
-Voice files land in `models/phonon-40m-multilingual/voices/` and are added to `voices.json`. To
-add one by hand, put the `.safetensors` file there and add a line to `voices.json`:
-
-```json
-{
-  "default": "default-voice.safetensors",
-  "Zoey": "voices/NbpkqMVS3CJeq2j8.safetensors"
-}
-```
-
 **Another checkpoint**: the whole Phonon family works the same way. The public English
 `phonon-31m-en` is useful for a quick smoke test:
 
 ```powershell
-npm run fetch-model -- --repo gradium/phonon-31m-en --out models/phonon-31m-en
+hf download gradium/phonon-31m-en --local-dir models/phonon-31m-en
+# or: npm run fetch-model -- --repo gradium/phonon-31m-en --out models/phonon-31m-en
 ```
 
 ### 2. Import it in the extension
@@ -95,10 +103,20 @@ possible. Nothing is uploaded anywhere.
 Every checkpoint brings one `default` voice. More voices are small `.safetensors` files (about
 256 KB each) from the public
 [gradium/phonon-voices](https://huggingface.co/gradium/phonon-voices) catalog (~100 voices) or
-Gradium Studio:
+Gradium Studio.
+
+Download the whole catalog (~34 MB; it also contains `samples/`, which the extension ignores):
 
 ```powershell
 hf download gradium/phonon-voices --local-dir models/phonon-voices
+```
+
+Or only the voices and their names (~25 MB):
+
+```powershell
+hf download gradium/phonon-voices `
+  --include "voices/*.safetensors" --include "voices.jsonl" `
+  --local-dir models/phonon-voices
 ```
 
 Then **Settings → Voices → Folder…** and pick `models/phonon-voices` (the folder with
