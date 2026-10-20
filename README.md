@@ -214,6 +214,10 @@ CPU thread, or on WebGPU when `Auto` finds an adapter.
 
 ## Licence
 
-The extension code is unlicensed/personal. The runtime (`phonon-tts`) is MIT OR Apache-2.0. The
-multilingual 40m model weights are **CC BY-NC 4.0** (non-commercial); the `phonon-31m-en` model
-is Apache-2.0. The model files are not part of this repository.
+The extension is **MIT licensed** — see [LICENSE](LICENSE). The bundled runtime (`phonon-tts`, in
+`src/vendor/phonon-tts/`) is MIT OR Apache-2.0; its licence texts ship with it, and
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists the third-party terms.
+
+The model weights and voices are not part of this repository or the extension package. The
+multilingual 40m weights are **CC BY-NC 4.0** (non-commercial); `phonon-31m-en` and the
+`gradium/phonon-voices` catalog are Apache-2.0.

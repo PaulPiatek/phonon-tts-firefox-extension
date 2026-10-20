@@ -94,3 +94,11 @@
   works in Node where `Worker`/`AudioContext` do not.
 - The model speaks 24 kHz mono, 80 ms frames. `player.js` holds ~300 ms before scheduling the
   first chunk; generation is normally much faster than playback.
+
+## Licences
+
+- The extension is MIT: root `LICENSE` and `src/LICENSE` (the latter ships in the XPI).
+- The vendored runtime is MIT OR Apache-2.0; keep `src/vendor/phonon-tts/LICENSE-MIT` and
+  `LICENSE-APACHE` inside the package. `npm run vendor` copies them.
+- Model weights and voices are not distributed; users import them. Do not bundle them without
+  handling the CC BY-NC 4.0 (40m weights) / Apache-2.0 (31m weights, voices) terms.
