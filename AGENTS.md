@@ -19,6 +19,7 @@
   class name instead of its content.
 - `npm run lint` — `web-ext lint`, must stay at 0 errors / 0 warnings.
 - `npm run vendor` — refresh `src/vendor/phonon-tts` after changing the dependency.
+- `npm run sign` — build and sign for AMO (unlisted), prompting for API credentials.
 - `npm run fetch-model -- --voice Zoey` — model/voices into `models/…`, to import in the UI.
 - `npm run bench -- --model models/phonon-31m-en --voice Zoey` — real wasm run in Node, writes
   `bench.wav`.

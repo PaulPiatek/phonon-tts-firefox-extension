@@ -9,6 +9,7 @@
     "test": "node --test \"tests/*.test.mjs\"",
     "lint": "web-ext lint",
     "build": "web-ext build",
+    "sign": "node scripts/sign.mjs",
     "fetch-model": "node scripts/fetch-model.mjs",
     "bench": "node scripts/bench.mjs",
     "vendor": "node scripts/vendor-runtime.mjs"

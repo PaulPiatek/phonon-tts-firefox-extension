@@ -185,6 +185,17 @@ pitch.
   pipeline and prints device, threads, sample rate and features.
 - `npm run lint` — `web-ext lint` (must stay at 0 errors/warnings).
 
+## Publishing
+
+`npm run sign` builds the extension and signs it with `web-ext sign` for the **unlisted** channel
+(configured in `.web-ext-config.mjs`), writing an XPI to `web-ext-artifacts/`. It prompts for an
+AMO API key and secret, or reads `WEB_EXT_API_KEY` / `WEB_EXT_API_SECRET` from the environment.
+Create a key pair at [addons.mozilla.org/developers/addon/api/key](https://addons.mozilla.org/developers/addon/api/key/).
+
+For a public AMO listing, change `sign.channel` to `"listed"` in `.web-ext-config.mjs` (or pass
+`--channel=listed`); Mozilla then reviews the submission. The XPI never contains a model or
+voices, so it stays small and the licence of the weights does not enter the package.
+
 ## How it fits together
 
 | Path | What it is |
