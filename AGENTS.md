@@ -62,6 +62,9 @@
   unselected. `renderModelChoices` is called first and the value set after.
 - **The options page uses the exported `store` object, not named imports,** so tests can swap
   its methods. Keep it that way; the fake-DOM tests in `tests/options.test.mjs` depend on it.
+- **`renderVoices` filters on `voiceQuery`** (name, language, description) and re-renders from
+  `currentModel`, so typing does not round-trip to the background. Importing a voice clears the
+  filter so the new rows are visible.
 - **A model's languages come from its imported `config.json` blob** (`describeModel`), so the
   page can warn before anything is loaded. The language is a load option: changing it must
   dispose the engine (it is in `needsReload`) and rebuild on the next Speak.

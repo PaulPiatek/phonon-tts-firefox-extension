@@ -16,7 +16,6 @@ const $ = (id) => document.getElementById(id);
 const els = {
   status: $("status"),
   modelName: $("modelName"),
-  modelSearch: $("modelSearch"),
   importModel: $("importModel"),
   deleteModel: $("deleteModel"),
   modelPicker: $("modelPicker"),
@@ -27,6 +26,7 @@ const els = {
   importVoiceFolder: $("importVoiceFolder"),
   voicePicker: $("voicePicker"),
   voiceFolderPicker: $("voiceFolderPicker"),
+  voiceSearch: $("voiceSearch"),
   voiceList: $("voice-list"),
   lang: $("lang"),
   voice: $("voice"),
@@ -42,8 +42,9 @@ const els = {
 
 let imported = [];
 let sampleLang = null;
-let modelQuery = "";
 let currentSettings = null;
+let currentModel = null;
+let voiceQuery = "";
 
 const LANG_NAMES = {
   en: "English",
@@ -162,11 +163,31 @@ function voiceRow(model, name, kind, voice) {
 }
 
 function renderVoices(model) {
-  els.voiceList.replaceChildren();
-  for (const name of model.modelVoices) els.voiceList.append(voiceRow(model, name, "model", null));
-  for (const voice of model.library) els.voiceList.append(voiceRow(model, voice.name, "library", voice));
-  if (model.modelVoices.length === 0 && model.library.length === 0) {
-    const empty = node("div", "No voices yet. Import one above, or import a model (its own voices come with it).");
+  currentModel = model;
+  const query = voiceQuery.trim().toLowerCase();
+  const matches = (voice) =>
+    !query ||
+    (voice.name ?? "").toLowerCase().includes(query) ||
+    (voice.language ?? "").toLowerCase().includes(query) ||
+    (voice.description ?? "").toLowerCase().includes(query);
+
+  const rows = [];
+  for (const name of model.modelVoices) {
+    if (matches({ name })) rows.push(voiceRow(model, name, "model", null));
+  }
+  for (const voice of model.library) {
+    if (matches(voice)) rows.push(voiceRow(model, voice.name, "library", voice));
+  }
+
+  els.voiceList.replaceChildren(...rows);
+  if (rows.length === 0) {
+    const hasVoices = model.modelVoices.length + model.library.length > 0;
+    const empty = node(
+      "div",
+      hasVoices
+        ? "No voices match the search."
+        : "No voices yet. Import one above, or import a model (its own voices come with it)."
+    );
     empty.className = "hint";
     els.voiceList.append(empty);
   }
@@ -202,24 +223,13 @@ function engineSummary(engine) {
 
 function renderModelChoices(settings) {
   currentSettings = settings;
-  const query = modelQuery.trim().toLowerCase();
-  const matches = imported.filter((model) => !query || model.name.toLowerCase().includes(query));
   const selected = settings.modelName || "";
-
-  // The current selection stays visible even when the filter excludes it, so the select is
-  // never blank while the user is typing.
-  const shown = [...matches];
-  if (selected && !shown.some((model) => model.name === selected)) {
-    const current = imported.find((model) => model.name === selected);
-    if (current) shown.unshift(current);
-  }
-
   els.modelName.replaceChildren();
   const placeholder = node("option", imported.length === 0 ? "No model imported" : "Choose a model…");
   placeholder.value = "";
   placeholder.disabled = true;
   els.modelName.append(placeholder);
-  for (const model of shown) {
+  for (const model of imported) {
     const option = node("option", `Imported: ${model.name} (${mb(model.bytes)})`);
     option.value = model.name;
     els.modelName.append(option);
@@ -227,12 +237,6 @@ function renderModelChoices(settings) {
   if (selected && !imported.some((model) => model.name === selected)) {
     const option = node("option", `Missing: ${selected}`);
     option.value = selected;
-    els.modelName.append(option);
-  }
-  if (shown.length === 0 && query) {
-    const option = node("option", "No models match the search");
-    option.value = "";
-    option.disabled = true;
     els.modelName.append(option);
   }
   els.modelName.value = selected;
@@ -361,21 +365,9 @@ els.modelName.addEventListener("change", async () => {
   if (state?.ok !== false) showStatus("Model switched; it loads on the next Speak.", "ok");
 });
 
-els.modelSearch.addEventListener("input", () => {
-  modelQuery = els.modelSearch.value;
-  if (currentSettings) renderModelChoices(currentSettings);
-});
-
-els.modelSearch.addEventListener("keydown", async (event) => {
-  if (event.key !== "Enter") return;
-  event.preventDefault();
-  const query = modelQuery.trim().toLowerCase();
-  if (!query) return;
-  const match = imported.find((model) => model.name.toLowerCase().includes(query));
-  if (!match) return;
-  els.modelName.value = match.name;
-  const state = await saveForm();
-  if (state?.ok !== false) showStatus(`Model: ${match.name}. It loads on the next Speak.`, "ok");
+els.voiceSearch.addEventListener("input", () => {
+  voiceQuery = els.voiceSearch.value;
+  if (currentModel) renderVoices(currentModel);
 });
 
 els.form.addEventListener("submit", (event) => {
@@ -399,8 +391,6 @@ els.modelPicker.addEventListener("change", async () => {
     imported = await store.listModels();
     // Rebuild the options before selecting: setting a <select> to a value it does not have
     // yet silently leaves it empty, which is how imported models used to go unselected.
-    modelQuery = "";
-    els.modelSearch.value = "";
     renderModelChoices({ ...(currentSettings ?? {}), modelName: record.name });
     els.modelName.value = record.name;
     const state = await saveForm({ quiet: true });
@@ -443,6 +433,9 @@ async function importVoices(files) {
     const { voices, skipped } = await collectVoiceFiles(files);
     showStatus(`Storing ${voices.length} voice${voices.length === 1 ? "" : "s"}…`);
     await store.putVoices(voices);
+    // Show the new voices even if a filter was hiding them.
+    voiceQuery = "";
+    els.voiceSearch.value = "";
     // The engine holds the voice list from when it loaded; make it rebuild with the new ones.
     render(await send({ type: "voices-changed" }));
     const extra = skipped.length ? `, ${skipped.length} file${skipped.length === 1 ? "" : "s"} skipped` : "";

@@ -19,9 +19,6 @@
       <label>Use
         <select id="modelName"></select>
       </label>
-      <label>Search
-        <input type="search" id="modelSearch" placeholder="Filter models…" autocomplete="off" spellcheck="false">
-      </label>
       <div class="row">
         <button type="button" class="primary" id="importModel">Import a model folder…</button>
         <button type="button" class="ghost" id="deleteModel">Delete</button>
@@ -52,6 +49,9 @@
         or Gradium Studio. Voices are kept in this browser and shared by every imported model.
         Pick the catalog folder (the one with <code>voices.jsonl</code>) to get friendly names.
       </div>
+      <label>Search
+        <input type="search" id="voiceSearch" placeholder="Filter by name, language or description…" autocomplete="off" spellcheck="false">
+      </label>
       <div id="voice-list" class="voice-list"></div>
     </div>
 

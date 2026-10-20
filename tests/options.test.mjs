@@ -85,10 +85,6 @@ function flatten(node) {
   return [node, ...node.children.flatMap((child) => (child instanceof FakeText ? [] : flatten(child)))];
 }
 
-function optionValues(select) {
-  return select.children.filter((child) => child.tagName === "OPTION").map((child) => child.value);
-}
-
 function fakeFile(path, text) {
   const blob = new Blob([text]);
   return {
@@ -152,7 +148,7 @@ describe("options page", () => {
       model: {
         source: "imported",
         modelDir: "phonon-40m-multilingual",
-        voices: ["default", "Henrik"],
+        voices: ["default", "Henrik", "Zoey"],
         modelVoices: ["default"],
         languages: ["en", "fr", "de", "es", "pt"],
         defaultVoice: "default",
@@ -163,6 +159,13 @@ describe("options page", () => {
             bytes: 256136,
             language: "de",
             description: "Warm, low and unhurried.",
+            shadowed: false
+          },
+          {
+            name: "Zoey",
+            bytes: 256136,
+            language: "en",
+            description: "Bright and playful.",
             shadowed: false
           }
         ]
@@ -245,25 +248,29 @@ describe("options page", () => {
     assert.equal(last.settings.voice, "Henrik");
   });
 
-  test("the model search filters the choices and Enter selects the first match", async () => {
+  test("the voice search filters by name, language or description", async () => {
     await load();
-    messages.length = 0;
+    const search = elements.get("voiceSearch");
+    const list = elements.get("voice-list");
 
-    const search = elements.get("modelSearch");
-    search.value = "31m";
+    search.value = "hen";
     search.fire("input");
-    assert.deepEqual(optionValues(elements.get("modelName")), [
-      "",
-      "phonon-40m-multilingual",
-      "phonon-31m-en"
-    ]);
+    assert.match(list.textContent, /Henrik/);
+    assert.doesNotMatch(list.textContent, /Zoey/);
 
-    search.fire("keydown", { key: "Enter" });
-    await sleep();
+    search.value = "bright";
+    search.fire("input");
+    assert.match(list.textContent, /Zoey/);
+    assert.doesNotMatch(list.textContent, /Henrik/);
 
-    assert.equal(elements.get("modelName").value, "phonon-31m-en");
-    const last = messages.filter((message) => message.type === "save-settings").at(-1);
-    assert.equal(last.settings.modelName, "phonon-31m-en");
+    search.value = "de";
+    search.fire("input");
+    assert.match(list.textContent, /Henrik/, "language matches too");
+    assert.doesNotMatch(list.textContent, /Zoey/);
+
+    search.value = "no-such-voice";
+    search.fire("input");
+    assert.match(list.textContent, /No voices match the search/);
   });
 
   test("importing a model selects and saves it, ready to speak", async () => {

@@ -92,8 +92,7 @@ into the extension's own storage once; after that they work offline. **Delete** 
 and importing again replaces it, so re-import after replacing the files.
 
 The model name is the folder name, so two checkpoints from differently named folders can be
-switched between in the dropdown. With several imported, the **Search** box filters the list —
-press <kbd>Enter</kbd> to select the first match, or pick one from the dropdown.
+switched between in the dropdown.
 
 Browsers never give an extension a durable path to a folder on disk: a picker hands over the
 *contents*. Copying them into the extension's storage is what makes "pick once, use forever"
@@ -127,9 +126,10 @@ name (catalog files are named by voice id, so the listing is worth including).
 
 Voices are stored in the browser and **shared by every imported model** — the file format is the
 same across the Phonon family. `Use` selects one, `Preview` speaks the text in the Try-it box
-with it without changing the saved voice, and `×` deletes it. A model's own voice wins over a
-library voice with the same name (every checkpoint has `default`). Importing a voice while a
-model is loaded rebuilds that model on the next Speak, so the new voice is used immediately.
+with it without changing the saved voice, and `×` deletes it. With many voices, the **Search**
+box filters the list by name, language or description. A model's own voice wins over a library
+voice with the same name (every checkpoint has `default`). Importing a voice while a model is
+loaded rebuilds that model on the next Speak, so the new voice is used immediately.
 
 The browser build speaks ready-made voices only; voice cloning is not available.
 
