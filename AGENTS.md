@@ -14,7 +14,9 @@
 
 ## Commands
 
-- `npm test` — full Node test suite. Must pass after every change.
+- `npm test` — full Node test suite. Must pass after every change. `tests/options.test.mjs`
+  renders the settings page against a tiny fake DOM, which is what catches a row printing a
+  class name instead of its content.
 - `npm run lint` — `web-ext lint`, must stay at 0 errors / 0 warnings.
 - `npm run vendor` — refresh `src/vendor/phonon-tts` after changing the dependency.
 - `npm run fetch-model -- --voice Zoey` — model/voices into `models/…`, to import in the UI.

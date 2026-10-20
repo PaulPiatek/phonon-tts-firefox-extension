@@ -84,9 +84,17 @@ function voiceRow(model, name, kind, voice) {
     title.append(badge("hidden by model", "shadowed"));
     title.lastChild.title = "The model ships a voice with this name, which is used instead.";
   }
-  if (voice?.language) title.append(node("span", "voice-meta", voice.language));
+  if (voice?.language) {
+    const meta = node("span", voice.language);
+    meta.className = "voice-meta";
+    title.append(meta);
+  }
   main.append(title);
-  if (voice?.description) main.append(node("div", "voice-desc", voice.description));
+  if (voice?.description) {
+    const description = node("div", voice.description);
+    description.className = "voice-desc";
+    main.append(description);
+  }
   row.append(main);
 
   const actions = document.createElement("div");

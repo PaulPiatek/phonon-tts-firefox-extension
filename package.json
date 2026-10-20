@@ -1,6 +1,6 @@
 {
   "name": "ff-phonon-tts",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Firefox extension that reads selected text aloud with Phonon TTS, on-device in the browser.",
   "private": true,
   "type": "module",
