@@ -148,6 +148,20 @@ export async function allVoices() {
   return getAll(VOICES);
 }
 
+/** One voice from the library, with its blob. */
+export async function getVoice(name) {
+  const db = await openDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const request = db.transaction(VOICES, "readonly").objectStore(VOICES).get(name);
+      request.onsuccess = () => resolve(request.result ?? null);
+      request.onerror = () => reject(request.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+
 /** Add or replace voices from `collectVoiceFiles`. */
 export async function putVoices(voices) {
   try {
@@ -174,6 +188,7 @@ export const store = {
   deleteModel,
   listVoices,
   allVoices,
+  getVoice,
   putVoices,
   deleteVoice
 };

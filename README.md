@@ -127,7 +127,8 @@ name (catalog files are named by voice id, so the listing is worth including).
 Voices are stored in the browser and **shared by every imported model** — the file format is the
 same across the Phonon family. `Use` selects one, `Preview` speaks the text in the Try-it box
 with it without changing the saved voice, and `×` deletes it. A model's own voice wins over a
-library voice with the same name (every checkpoint has `default`).
+library voice with the same name (every checkpoint has `default`). Importing a voice while a
+model is loaded rebuilds that model on the next Speak, so the new voice is used immediately.
 
 The browser build speaks ready-made voices only; voice cloning is not available.
 
@@ -146,6 +147,8 @@ browser's storage, not the XPI, so the package stays small.
 In **Settings**, pick the language of the text you read, then press **Speak** in the "Try it"
 card. The status line reports load progress and the device the model is running on. With no
 model imported, the Model card says so.
+
+Every setting saves as soon as it changes — there is no Save button.
 
 ## Usage
 

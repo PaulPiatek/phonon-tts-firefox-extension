@@ -82,4 +82,5 @@ button:hover { filter: brightness(0.97); }
 .hint { padding: 5px 16px 8px; color: #888; font-size: 11px; }
 .card .hint { padding-left: 0; padding-right: 0; }
 .hint code { background: #ececec; border-radius: 3px; padding: 0 3px; }
+.hint.autosave { color: #999; padding-top: 10px; }
 .footer { padding: 8px 16px 0; border-top: 1px solid #e5e5e5; margin-top: 12px; line-height: 1.6; }

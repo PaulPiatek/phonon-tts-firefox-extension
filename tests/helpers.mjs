@@ -293,6 +293,8 @@ export function makeEngine({ chunks = [], wait = false, fail = null, progress = 
   const loader = async (options) => {
     loader.options = options;
     loader.allOptions = [...(loader.allOptions ?? []), options];
+    // A real engine reports the voices its spec was built with.
+    engine.voices = Object.keys(options?.model?.voices ?? {});
     if (progress) options.onProgress?.(progress);
     if (gate) await gate;
     if (fail) throw fail;

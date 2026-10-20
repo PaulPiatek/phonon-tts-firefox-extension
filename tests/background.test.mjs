@@ -41,6 +41,7 @@ describe("background.js", () => {
   let revoked;
   const realGetModel = store.getModel;
   const realAllVoices = store.allVoices;
+  const realGetVoice = store.getVoice;
   const realCreateObjectURL = URL.createObjectURL;
   const realRevokeObjectURL = URL.revokeObjectURL;
 
@@ -53,6 +54,7 @@ describe("background.js", () => {
 
     store.getModel = async (name) => record(name);
     store.allVoices = async () => [];
+    store.getVoice = async () => null;
     browser.storage.local.seed("settings", { modelName: "test-model" });
 
     created = [];
@@ -70,6 +72,7 @@ describe("background.js", () => {
     resetEngineLoader();
     store.getModel = realGetModel;
     store.allVoices = realAllVoices;
+    store.getVoice = realGetVoice;
     URL.createObjectURL = realCreateObjectURL;
     URL.revokeObjectURL = realRevokeObjectURL;
     delete globalThis.browser;
@@ -457,6 +460,61 @@ describe("background.js", () => {
     await send({ type: "stop" });
     await flush();
     assert.equal(timers.live.size, 0);
+  });
+
+  test("importing voices after the model loaded rebuilds it so the new voice is used", async () => {
+    let library = [];
+    store.allVoices = async () => library;
+    const loader = makeEngine({ chunks: [pcm(240)] });
+    setEngineLoader(loader);
+
+    await loadBackground();
+    speakViaMenu("first");
+    await flush();
+    audio.contexts[0].sources[0].onended();
+    await flush();
+    assert.equal(loader.allOptions.length, 1, "the engine was built without any library voice");
+
+    library = [{ name: "Zoey", blob: new Blob(["zoey"]), bytes: 4 }];
+    const state = await send({ type: "voices-changed" });
+    assert.deepEqual(state.model.voices, ["default", "Anna", "Zoey"]);
+    assert.equal(loader.engine.disposed, 1, "the old engine is thrown away");
+
+    await send({ type: "save-settings", settings: { voice: "Zoey", modelName: "test-model" } });
+    speakViaMenu("second");
+    await flush();
+
+    assert.equal(loader.allOptions.length, 2, "the next speak loads the model again");
+    assert.match(loader.allOptions[1].model.voices.Zoey, /^blob:test\//);
+    assert.equal(loader.engine.calls.at(-1).options.voice, "Zoey");
+    audio.contexts.at(-1).sources[0]?.onended();
+    await flush();
+  });
+
+  test("a stored voice missing from the loaded engine forces a reload instead of the default", async () => {
+    let library = [];
+    store.allVoices = async () => library;
+    store.getVoice = async (name) => library.find((voice) => voice.name === name) ?? null;
+    const loader = makeEngine({ chunks: [pcm(240)] });
+    setEngineLoader(loader);
+
+    await loadBackground();
+    speakViaMenu("first");
+    await flush();
+    audio.contexts[0].sources[0].onended();
+    await flush();
+    assert.equal(loader.allOptions.length, 1);
+
+    // Imported in a way that did not tell the background (the safety net's reason to exist).
+    library = [{ name: "Zoey", blob: new Blob(["zoey"]), bytes: 4 }];
+    await send({ type: "save-settings", settings: { voice: "Zoey", modelName: "test-model" } });
+    speakViaMenu("second");
+    await flush();
+
+    assert.equal(loader.allOptions.length, 2);
+    assert.equal(loader.engine.calls.at(-1).options.voice, "Zoey");
+    audio.contexts.at(-1).sources[0]?.onended();
+    await flush();
   });
 
   test("switching model releases every blob URL the old one used", async () => {

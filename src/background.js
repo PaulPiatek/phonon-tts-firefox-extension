@@ -266,8 +266,21 @@ async function speak(text, voiceOverride) {
   }
   if (state.session?.id !== id) return;
 
-  const preferred = voiceOverride && engine.voices?.includes(voiceOverride) ? voiceOverride : settings.voice;
-  const voice = engine.voices?.includes(preferred) ? preferred : undefined;
+  const wanted = voiceOverride || settings.voice;
+
+  // Belt and braces: the voice library can change while the engine is loaded. If the wanted
+  // voice exists in storage but not in this engine's spec, rebuild before speaking, so a new
+  // voice never silently falls back to the default one.
+  if (wanted && !engine.voices?.includes(wanted)) {
+    const stored = await store.getVoice(wanted).catch(() => null);
+    if (stored?.blob) {
+      disposeEngine();
+      engine = await getEngine(settings);
+      if (state.session?.id !== id) return;
+    }
+  }
+
+  const voice = engine.voices?.includes(wanted) ? wanted : undefined;
   setStatus("Speaking…", "■", true);
   try {
     for await (const pcm of engine.stream(clean, {
@@ -398,6 +411,13 @@ async function handleMessage(message) {
       const text = message.text || TEST_TEXT[normalizeSettings(message.settings).lang] || TEST_TEXT.en;
       speak(text, message.voice).catch((error) => fail(error));
       return { ok: true };
+    }
+    case "voices-changed": {
+      // The engine was built with the old voice list; rebuild on the next speak.
+      if (state.session) stop();
+      if (state.enginePromise) await state.enginePromise.catch(() => {});
+      disposeEngine();
+      return describeState();
     }
     case "stop":
       stop();

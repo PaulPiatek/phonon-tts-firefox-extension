@@ -32,7 +32,6 @@ const els = {
   temperature: $("temperature"),
   temperatureValue: $("temperature-value"),
   form: $("form"),
-  save: $("save"),
   preview: $("preview"),
   speak: $("speak"),
   stop: $("stop"),
@@ -123,13 +122,15 @@ function voiceRow(model, name, kind, voice) {
     remove.title = `Delete ${name} from this browser`;
     remove.addEventListener("click", async () => {
       if (!confirm(`Delete the voice "${name}" from this browser?`)) return;
+      const wasSelected = els.voice.value === name;
       await deleteVoice(name);
-      if (els.voice.value === name) {
-        // Fall back to one of the model's own voices; `model.defaultVoice` may be the one
-        // that was just deleted.
-        els.voice.value = model.modelVoices.includes("default") ? "default" : model.modelVoices[0] ?? "";
+      let state = await send({ type: "voices-changed" });
+      if (wasSelected) {
+        els.voice.value = state.model.modelVoices.includes("default") ? "default" : state.model.modelVoices[0] ?? "";
+        state = await saveForm({ quiet: true });
+      } else {
+        render(state);
       }
-      await saveForm();
       showStatus(`Deleted ${name}`, "ok");
     });
     actions.append(remove);
@@ -263,15 +264,23 @@ function readForm() {
   };
 }
 
+let renderSeq = 0;
+
 async function refresh() {
+  const seq = ++renderSeq;
   imported = await listModels().catch(() => []);
-  render(await send({ type: "get-state" }));
+  const state = await send({ type: "get-state" });
+  // A save or import that started later must win over this slower reply.
+  if (seq === renderSeq) render(state);
 }
 
-async function saveForm() {
-  showStatus("Saving…");
+async function saveForm({ quiet = false } = {}) {
+  const seq = ++renderSeq;
   const state = await send({ type: "save-settings", settings: readForm() });
-  render(state);
+  if (seq === renderSeq) {
+    render(state);
+    if (!quiet && state?.ok !== false && !state.active && !state.error) showStatus("Saved", "ok");
+  }
   return state;
 }
 
@@ -283,19 +292,22 @@ els.lang.addEventListener("change", () => {
   const previous = sampleLang ? SAMPLES[sampleLang] : "";
   if (!els.preview.value || els.preview.value === previous) els.preview.value = SAMPLES[els.lang.value] || SAMPLES.en;
   sampleLang = els.lang.value;
+  saveForm();
 });
+
+els.voice.addEventListener("change", () => saveForm());
+els.device.addEventListener("change", () => saveForm());
+els.temperature.addEventListener("change", () => saveForm());
 
 els.modelName.addEventListener("change", async () => {
   els.deleteModel.disabled = !els.modelName.value;
-  await saveForm();
-  if (els.modelName.value) showStatus("Model switched; it loads on the next Speak.", "ok");
+  const state = await saveForm();
+  if (state?.ok !== false) showStatus("Model switched; it loads on the next Speak.", "ok");
 });
 
-els.form.addEventListener("submit", async (event) => {
+els.form.addEventListener("submit", (event) => {
   event.preventDefault();
-  els.save.disabled = true;
-  await saveForm();
-  els.save.disabled = false;
+  saveForm();
 });
 
 els.importModel.addEventListener("click", () => els.modelPicker.click());
@@ -312,8 +324,16 @@ els.modelPicker.addEventListener("change", async () => {
     showStatus(`Copying ${record.name} (${mb(record.bytes)}) into browser storage…`);
     await putModel(record);
     imported = await listModels();
+    // Select the new model right away, including on a fresh install where the dropdown
+    // had nothing selected before.
     els.modelName.value = record.name;
-    await saveForm();
+    const state = await saveForm({ quiet: true });
+    if (state?.settings?.modelName !== record.name) {
+      // Something re-rendered the select in between; do it once more, now that lists agree.
+      imported = await listModels();
+      els.modelName.value = record.name;
+      await saveForm({ quiet: true });
+    }
     showStatus(`Imported ${record.name}. It loads on the next Speak.`, "ok");
   } catch (error) {
     showStatus("Import failed: " + (error?.message ?? error), "error");
@@ -332,7 +352,7 @@ els.deleteModel.addEventListener("click", async () => {
     await deleteModel(name);
     imported = await listModels();
     els.modelName.value = "";
-    await saveForm();
+    await saveForm({ quiet: true });
     showStatus(`Deleted ${name}. Import a model to speak again.`, "ok");
   } catch (error) {
     showStatus("Could not delete: " + (error?.message ?? error), "error");
@@ -347,7 +367,8 @@ async function importVoices(files) {
     const { voices, skipped } = await collectVoiceFiles(files);
     showStatus(`Storing ${voices.length} voice${voices.length === 1 ? "" : "s"}…`);
     await putVoices(voices);
-    await refresh();
+    // The engine holds the voice list from when it loaded; make it rebuild with the new ones.
+    render(await send({ type: "voices-changed" }));
     const extra = skipped.length ? `, ${skipped.length} file${skipped.length === 1 ? "" : "s"} skipped` : "";
     showStatus(`Imported ${voices.length} voice${voices.length === 1 ? "" : "s"}${extra}.`, "ok");
   } catch (error) {

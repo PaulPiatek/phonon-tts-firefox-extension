@@ -48,6 +48,13 @@
   same IndexedDB (v2). A voice name the model already has (`default` on every checkpoint)
   shadows the library one: `describeModel` leaves it out of `voices`, `buildSpec` skips it, and
   the UI marks it. `settings.voice` may name either kind.
+- **The engine's voice list is fixed when it loads.** If the library changes afterwards, the
+  loaded spec still only knows the old names, and a newly selected voice would silently fall
+  back to `default`. `voices-changed` disposes the engine after an import/delete, and `speak`
+  also checks `store.getVoice` for a wanted voice the engine lacks (belt and braces). Keep both.
+- **Settings auto-save.** There is no Save button; selects and the temperature slider call
+  `saveForm` on `change`. `refresh`/`saveForm` share a render sequence so a slow, stale reply
+  cannot overwrite the form (this bit the post-import model selection).
 - **Voice names come from the catalog's `voices.jsonl`, not the file names.** Catalog files are
   named by voice id (`NbpkqMVS3CJeq2j8.safetensors`), so dropping the listing loses only the
   friendly names. `voices.json` (the model manifest) is accepted as a fallback.
