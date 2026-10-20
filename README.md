@@ -4,10 +4,6 @@ A Firefox extension that reads selected text aloud with
 [Phonon](https://huggingface.co/gradium/phonon-40m-multilingual), running entirely inside the
 browser: no server, no API key, no network at runtime.
 
-It is the same interaction as [`ff-tts`](../ff-tts): select text, click the toolbar button or
-right-click → **🔊 Phonon**, and hear it. The difference is where the audio comes from — the
-model is WebAssembly in an extension worker instead of a local TTS backend.
-
 ## What it does
 
 - **Toolbar button** — speaks the current selection; click again (or right-click → **🔇 Stop
