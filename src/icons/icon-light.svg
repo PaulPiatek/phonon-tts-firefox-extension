@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="VoiceStudio">
+  <polygon points="16.64,26.88 25.6,26.88 35.2,17.92 35.2,46.08 25.6,37.12 16.64,37.12" fill="#ffffff"/>
+  <g fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round">
+    <path d="M41.62 24.66 A8.96 8.96 0 0 1 41.62 39.34"/>
+    <path d="M45.29 19.42 A15.36 15.36 0 0 1 45.29 44.58"/>
+  </g>
+</svg>

@@ -1,0 +1,7 @@
+node_modules/
+web-ext-artifacts/
+bench.wav
+src/.amo-upload-uuid
+
+# Downloaded checkpoints live outside the extension and are imported in the UI.
+models/

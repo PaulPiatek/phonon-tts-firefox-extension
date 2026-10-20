@@ -1,0 +1,56 @@
+{
+  "manifest_version": 3,
+  "name": "Phonon TTS",
+  "version": "0.2.0",
+  "description": "Read selected text aloud with Phonon, on-device. No server, no API key.",
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "scripting",
+    "storage",
+    "unlimitedStorage"
+  ],
+  "background": {
+    "scripts": ["background.js"],
+    "type": "module"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
+  "icons": {
+    "16": "icons/icon-dark-16.png",
+    "32": "icons/icon-dark-32.png",
+    "48": "icons/icon-dark-48.png",
+    "96": "icons/icon-dark-96.png",
+    "128": "icons/icon-dark-128.png"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon-dark-16.png",
+      "32": "icons/icon-dark-32.png",
+      "48": "icons/icon-dark-48.png"
+    },
+    "default_title": "Phonon: click to speak selection",
+    "theme_icons": [
+      { "light": "icons/icon-light-16.png", "dark": "icons/icon-dark-16.png", "size": 16 },
+      { "light": "icons/icon-light-32.png", "dark": "icons/icon-dark-32.png", "size": 32 },
+      { "light": "icons/icon-light-48.png", "dark": "icons/icon-dark-48.png", "size": 48 }
+    ]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "phonon-tts@localhost",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    },
+    "gecko_android": {
+      "strict_min_version": "142.0"
+    }
+  }
+}

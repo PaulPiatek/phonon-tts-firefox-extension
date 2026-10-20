@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Phonon self-test</title>
+  <style>
+    body { font: 13px/1.5 system-ui, sans-serif; margin: 24px; max-width: 760px; }
+    pre { background: #111; color: #d6f5d6; padding: 14px; border-radius: 8px; white-space: pre-wrap; }
+    code { background: #eee; padding: 0 3px; border-radius: 3px; }
+    .hint { color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Phonon self-test</h1>
+  <p class="hint">Loads the configured model through the background page, speaks one sentence,
+    and reports what the runtime says. Open it from <code>about:debugging</code> when you need to
+    check a fresh install.</p>
+  <pre id="log">starting…</pre>
+  <script type="module" src="selftest.js"></script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Phonon TTS - Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="header">
+    <strong>Phonon TTS</strong>
+    <span class="site">on-device · no server</span>
+  </div>
+
+  <div class="status" id="status">Idle</div>
+
+  <form id="form" class="settings">
+    <div class="card">
+      <div class="card-title">Model</div>
+      <label>Use
+        <select id="modelName"></select>
+      </label>
+      <div class="row">
+        <button type="button" class="primary" id="importModel">Import a model folder…</button>
+        <button type="button" class="ghost" id="deleteModel">Delete</button>
+      </div>
+      <input type="file" id="modelPicker" webkitdirectory multiple class="hidden">
+      <div class="hint">
+        Pick the folder holding <code>config.json</code>, <code>tokenizer.json</code>,
+        <code>model.q8.gguf</code> and <code>default-voice.safetensors</code> — plus
+        <code>voices.json</code> and <code>voices/</code> if you want extra voices.
+        The files are copied into this browser's storage once, then work offline; the extension
+        itself carries no model.
+      </div>
+      <div id="model-info" class="small">Checking…</div>
+      <div id="missing" class="warning hidden"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Speech</div>
+      <label>Language of the text
+        <select id="lang">
+          <option value="en">English</option>
+          <option value="fr">French</option>
+          <option value="de">German</option>
+          <option value="es">Spanish</option>
+          <option value="pt">Portuguese</option>
+          <option value="none">None (read as written)</option>
+        </select>
+      </label>
+      <div class="hint">Numbers, dates and symbols are read out the way a speaker of this language says them. Pick the language of the text you select.</div>
+
+      <label>Voice
+        <select id="voice"></select>
+      </label>
+
+      <label>Where generation runs
+        <select id="device">
+          <option value="auto">Auto (WebGPU when available)</option>
+          <option value="cpu">CPU</option>
+          <option value="webgpu">WebGPU</option>
+        </select>
+      </label>
+
+      <label>Temperature <output id="temperature-value">0.30</output>
+        <input type="range" id="temperature" min="0" max="1.5" step="0.05">
+      </label>
+      <div class="hint">Lower is steadier, higher is more expressive. The model's default is 0.3.</div>
+    </div>
+
+    <div class="row">
+      <button type="submit" class="primary" id="save">Save</button>
+    </div>
+  </form>
+
+  <div class="card">
+    <div class="card-title">Try it</div>
+    <textarea id="preview" spellcheck="false"></textarea>
+    <div class="row">
+      <button type="button" class="primary" id="speak">Speak</button>
+      <button type="button" class="ghost" id="stop">Stop</button>
+    </div>
+    <div class="hint" id="engine-info"></div>
+  </div>
+
+  <div class="hint footer">
+    Select text on any page, then click the toolbar button or right-click → <strong>🔊 Phonon</strong>.
+    Audio is generated on your device; nothing is sent anywhere.
+  </div>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>
