@@ -23,6 +23,8 @@
 - `npm run vendor` — refresh `src/vendor/phonon-tts` after changing the dependency.
 - `npm run clean` — removes the generated copies in `src/` and any unsigned zips left in
   `web-ext-artifacts/`; signed `.xpi` releases are kept.
+- `npm run build` — clean, re-vendor the runtime, copy the notices and checkpoint into `src/`,
+  then lint and test. It leaves `src/` ready for `about:debugging`; it does not produce an XPI.
 - `npm run sign` — cleans the generated copies, copies the notices and checkpoint into `src/`,
   then builds and signs for AMO (unlisted), prompting for API credentials. `web-ext sign` does
   the packaging itself; there is no separate build step.
