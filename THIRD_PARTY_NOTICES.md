@@ -14,6 +14,9 @@ The full texts ship inside the extension package:
 The files are copied verbatim by `scripts/vendor-runtime.mjs`, which records the version in
 `src/vendor/phonon-tts/VERSION`. No modifications are made to them.
 
+The same licence covers the WebAssembly builds in `wasm/` and `wasm-threads/` (compiled from the
+xn-ptts Rust runtime) and the `wasm-bindgen-rayon` worker helper that ships with them.
+
 ## Icons
 
 The toolbar and extension icons in `src/icons/` are original artwork by the extension author and
