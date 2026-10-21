@@ -13,7 +13,7 @@ export const DEFAULTS = {
   temperature: 0.3,
   // Passed to the model as its `duration_delta` conditioner: negative is faster, positive slower.
   durationDelta: 0,
-  // The name of the checkpoint imported into browser storage. Empty until one is picked.
+  // Empty selects the bundled Phonon 31M checkpoint; otherwise the name of an imported one.
   modelName: ""
 };
 

@@ -19,15 +19,17 @@ browser: no server, no API key, no network at runtime.
 
 The model uses about 100 MB of memory while loaded. Firefox terminates idle extension
 background pages, so after a long pause the next click reloads the checkpoint (well under a
-second from browser storage) and then speaks.
+second from the extension package) and then speaks.
 
-The extension ships **no model**: you download the files and import them once.
+The extension ships the English **Phonon 31M** checkpoint, so it speaks out of the box. Other
+checkpoints, such as the multilingual 40m, are imported once as described below.
 
 ## Setup
 
 ### 1. Get the model files
 
-The multilingual 40m repo is gated, so accept its terms on
+You only need this for a checkpoint other than the bundled English 31M. The multilingual 40m
+repo is gated, so accept its terms on
 [huggingface.co/gradium/phonon-40m-multilingual](https://huggingface.co/gradium/phonon-40m-multilingual)
 first. The extension reads only these four files:
 
@@ -135,15 +137,16 @@ downloads it into the model folder, and importing that folder brings it along.
 ### 4. Load the extension
 
 `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** → pick
-`src/manifest.json`. For a packaged install, `npm run build` writes a zip to
-`web-ext-artifacts/` (rename it to `.xpi`, or sign it on AMO). The imported model lives in the
-browser's storage, not the XPI, so the package stays small.
+`src/manifest.json`. The bundled checkpoint is copied into `src/models/` at build time, so run
+`node scripts/package-assets.mjs` once first (or `npm run build`) if you have not built yet. For
+a packaged install, `npm run build` writes a zip to `web-ext-artifacts/` (rename it to `.xpi`, or
+sign it on AMO). The XPI is about 60 MB; imported models still live in browser storage.
 
 ### 5. Check it
 
 In **Settings**, pick the language of the text you read, then press **Speak** in the "Try it"
-card. The status line reports load progress and the device the model is running on. With no
-model imported, the Model card says so.
+card. The status line reports load progress and the device the model is running on. The Model
+card names the checkpoint in use and lists its languages.
 
 Every setting saves as soon as it changes — there is no Save button.
 
@@ -179,7 +182,9 @@ pitch.
   `selftest.html` from its "Inspect" page, or visit
   `moz-extension://<uuid>/selftest.html`. It speaks one sentence through the real background
   pipeline and prints device, threads, sample rate and features.
-- `npm run lint` — `web-ext lint` (must stay at 0 errors/warnings).
+- `npm run lint` - `web-ext lint` (must stay at 0 errors/warnings).
+- `npm run clean` - removes the generated copies in `src/` and the unsigned zips in
+  `web-ext-artifacts/`; signed XPIs are kept. `npm run build` and `npm run sign` clean first.
 
 ## Publishing
 
@@ -189,8 +194,9 @@ AMO API key and secret, or reads `WEB_EXT_API_KEY` / `WEB_EXT_API_SECRET` from t
 Create a key pair at [addons.mozilla.org/developers/addon/api/key](https://addons.mozilla.org/developers/addon/api/key/).
 
 For a public AMO listing, change `sign.channel` to `"listed"` in `.web-ext-config.mjs` (or pass
-`--channel=listed`); Mozilla then reviews the submission. The XPI never contains a model or
-voices, so it stays small and the licence of the weights does not enter the package.
+`--channel=listed`); Mozilla then reviews the submission. The XPI contains the bundled 31M
+checkpoint (~54 MB compressed), whose Apache-2.0 licence permits redistribution; imported models
+and voices are not packaged.
 
 ## How it fits together
 
@@ -198,22 +204,24 @@ voices, so it stays small and the licence of the weights does not enter the pack
 | --- | --- |
 | `src/background.js` | MV3 event page: menus, toolbar, model lifetime, playback, keep-alive. |
 | `src/engine.js` | The only place that imports the vendored runtime; tests replace it with a fake. |
-| `src/model.js` | Describes the imported checkpoint and builds the runtime's `ModelSpec`. |
+| `src/model.js` | Describes the checkpoint in use (bundled or imported) and builds the runtime's `ModelSpec`. |
 | `src/model-files.js` | Validates the files from the folder picker, reads `voices.json`, keeps only what the runtime opens. |
 | `src/voice-files.js` | Validates picked voice files and names them from `voices.jsonl`. |
 | `src/store.js` | Imported checkpoints and voices in IndexedDB, listed and deleted from the options page. |
 | `src/player.js` | Schedules streamed `Float32Array` chunks on one 24 kHz `AudioContext`. |
 | `src/settings.js` | Language, voice, device, temperature, imported model name. |
 | `src/options.*` | Settings UI, model import/delete, live status. |
-| `src/vendor/phonon-tts/` | [`phonon-tts`](https://www.npmjs.com/package/phonon-tts) 0.4.0, copied from `node_modules` by `npm run vendor`. Plain ES modules plus the wasm builds. |
+| `src/vendor/phonon-tts/` | [`phonon-tts`](https://www.npmjs.com/package/phonon-tts) 0.4.1, copied from `node_modules` by `npm run vendor`. Plain ES modules plus the wasm builds. |
 | `scripts/fetch-model.mjs` | Downloads a checkpoint (and voices) from Hugging Face into `models/`. |
+| `scripts/package-assets.mjs` | Copies the notices and the bundled checkpoint into `src/` before `web-ext` packs it. |
 
 An imported model lives in IndexedDB as `Blob`s, and so does the voice library. The background
 page reads them when the model loads and makes `blob:` URLs for the runtime, which only accepts
 URLs; the URLs are revoked when the model is replaced. That is why the import happens in the
 options page but the URLs are made in the background: a blob URL dies with the page that
 created it. Model voices are used first; a library voice with a name the model already has is
-skipped.
+skipped. The bundled checkpoint needs no storage: its files are resolved straight from the
+extension package with `browser.runtime.getURL`.
 
 The runtime needs WebAssembly SIMD (all current Firefox, Chrome, Safari). Threads are not
 available in extension pages, because those are not cross-origin isolated; the model runs on one
@@ -225,6 +233,6 @@ The extension is **MIT licensed** — see [LICENSE](LICENSE). The bundled runtim
 `src/vendor/phonon-tts/`) is MIT OR Apache-2.0; its licence texts ship with it, and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists the third-party terms.
 
-The model weights and voices are not part of this repository or the extension package. The
-multilingual 40m weights are **CC BY-NC 4.0** (non-commercial); `phonon-31m-en` and the
-`gradium/phonon-voices` catalog are Apache-2.0.
+The bundled English `phonon-31m-en` checkpoint (weights, tokenizer and default voice) is
+**Apache-2.0**, so it ships in the package. The multilingual 40m weights are **CC BY-NC 4.0**
+(non-commercial) and are not packaged; the `gradium/phonon-voices` catalog is Apache-2.0.

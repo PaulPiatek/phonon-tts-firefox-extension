@@ -4,5 +4,9 @@ bench.wav
 *.xpi
 src/.amo-upload-uuid
 
+# Copied into src/ by scripts/package-assets.mjs so they ship in the XPI.
+src/THIRD_PARTY_NOTICES.md
+src/models/
+
 # Downloaded checkpoints live outside the extension and are imported in the UI.
 models/

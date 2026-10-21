@@ -21,18 +21,31 @@ function record(name = "my-model") {
 }
 
 describe("describeModel", () => {
-  test("reports that nothing is imported yet, but still lists the voice library", async () => {
+  test("defaults to the bundled checkpoint, and still lists the voice library", async () => {
     const store = {
       getModel: async () => null,
       allVoices: async () => [{ name: "Zoey", blob: new Blob(["z"]) }]
     };
     const model = await describeModel({ settings: { modelName: "" }, store });
-    assert.equal(model.source, "none");
-    assert.deepEqual(model.voices, []);
+    assert.equal(model.source, "bundled");
+    assert.equal(model.modelDir, "phonon-31m-en");
+    assert.deepEqual(model.voices, ["default", "Zoey"]);
+    assert.deepEqual(model.modelVoices, ["default"]);
+    assert.deepEqual(model.languages, ["en"]);
+    assert.equal(model.defaultVoice, "default");
     assert.deepEqual(
       model.library.map((voice) => voice.name),
       ["Zoey"]
     );
+  });
+
+  test("a library voice can speak with the bundled model, and a missing one falls back", async () => {
+    const store = { allVoices: async () => [{ name: "Zoey", blob: new Blob(["z"]) }] };
+    const chosen = await describeModel({ settings: { modelName: "", voice: "Zoey" }, store });
+    assert.equal(chosen.defaultVoice, "Zoey");
+
+    const gone = await describeModel({ settings: { modelName: "", voice: "Deleted" }, store });
+    assert.equal(gone.defaultVoice, "default");
   });
 
   test("surfaces the voices of the imported model", async () => {
@@ -108,8 +121,46 @@ describe("describeModel", () => {
 });
 
 describe("buildSpec", () => {
-  test("refuses to build anything until a model is imported", () => {
-    assert.throws(() => buildSpec({ source: "none" }), /No model imported yet/);
+  test("refuses to build a model it does not know", () => {
+    assert.throws(() => buildSpec({ source: "none" }), /No model is available/);
+  });
+
+  test("points the bundled checkpoint at the extension package, without blob URLs", () => {
+    const { spec, blobUrls } = buildSpec(
+      { source: "bundled", defaultVoice: "default" },
+      { getURL: (path) => `moz-extension://test/${path}` }
+    );
+
+    assert.deepEqual(spec.weights, { q8: "moz-extension://test/models/phonon-31m-en/model.q8.gguf" });
+    assert.equal(spec.tokenizer, "moz-extension://test/models/phonon-31m-en/tokenizer.json");
+    assert.equal(spec.config, "moz-extension://test/models/phonon-31m-en/config.json");
+    assert.deepEqual(spec.voices, {
+      default: "moz-extension://test/models/phonon-31m-en/default-voice.safetensors"
+    });
+    assert.equal(spec.defaultVoice, "default");
+    assert.deepEqual(blobUrls, []);
+  });
+
+  test("a library voice is a blob URL even when the model is bundled", (t) => {
+    t.mock.method(URL, "createObjectURL", () => "blob:test/1");
+
+    const { spec, blobUrls } = buildSpec(
+      {
+        source: "bundled",
+        defaultVoice: "Zoey",
+        library: [
+          { name: "Zoey", blob: new Blob(["zoey"]) },
+          { name: "default", blob: new Blob(["shadowed"]) }
+        ]
+      },
+      { getURL: (path) => `moz-extension://test/${path}` }
+    );
+
+    assert.deepEqual(spec.voices, {
+      default: "moz-extension://test/models/phonon-31m-en/default-voice.safetensors",
+      Zoey: "blob:test/1"
+    });
+    assert.deepEqual(blobUrls, ["blob:test/1"]);
   });
 
   test("makes blob URLs for every file of the imported model", (t) => {

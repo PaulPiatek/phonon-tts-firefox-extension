@@ -301,6 +301,21 @@ describe("options page", () => {
     assert.match(elements.get("model-info").textContent, /phonon-40m-de/);
   });
 
+  test("the bundled checkpoint is the empty choice and saves when picked", async () => {
+    await load();
+    const select = elements.get("modelName");
+    assert.equal(select.children[0].value, "", "the bundled model is the empty value");
+    assert.match(select.children[0].textContent, /Phonon 31M/);
+    assert.equal(select.children[0].disabled, false, "it is a real choice, not a placeholder");
+
+    select.value = "";
+    select.fire("change");
+    await sleep();
+
+    const last = messages.filter((message) => message.type === "save-settings").at(-1);
+    assert.equal(last.settings.modelName, "");
+  });
+
   test("warns when the text language is not one the model was trained for", async () => {
     await load();
     state.model.languages = ["en"];

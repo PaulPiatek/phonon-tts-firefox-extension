@@ -450,23 +450,35 @@ describe("background.js", () => {
     await flush();
   });
 
-  test("a fresh install says no model is imported, and speaking explains it", async () => {
+  test("a fresh install speaks with the bundled checkpoint", async () => {
     browser.storage.local.seed("settings", {});
     const loader = makeEngine({ chunks: [pcm(240)] });
     setEngineLoader(loader);
 
     await loadBackground();
     const before = await send({ type: "get-state" });
-    assert.equal(before.model.source, "none");
-    assert.deepEqual(before.model.voices, []);
+    assert.equal(before.model.source, "bundled");
+    assert.equal(before.model.modelDir, "phonon-31m-en");
+    assert.deepEqual(before.model.voices, ["default"]);
+    assert.deepEqual(before.model.languages, ["en"]);
 
     speakViaMenu("hello");
     await flush();
 
-    assert.equal(lastBadgeText(), "!");
-    const status = browser.__registry.messages.filter((m) => m.type === "status").at(-1);
-    assert.match(status.text, /No model imported yet/);
-    assert.equal(loader.engine.calls.length, 0);
+    assert.equal(loader.engine.calls.length, 1);
+    assert.equal(
+      loader.options.model.weights.q8,
+      "moz-extension://test/models/phonon-31m-en/model.q8.gguf"
+    );
+    assert.deepEqual(loader.options.model.voices, {
+      default: "moz-extension://test/models/phonon-31m-en/default-voice.safetensors"
+    });
+    assert.equal(created.length, 0, "the bundled model needs no blob URLs");
+    assert.equal(lastBadgeText(), "■", "playing shows the stop square");
+
+    audio.contexts[0].sources[0].onended();
+    await flush();
+    assert.equal(lastBadgeText(), "");
     assert.equal(timers.live.size, 0);
   });
 

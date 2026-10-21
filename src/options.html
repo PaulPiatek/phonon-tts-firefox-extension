@@ -25,11 +25,11 @@
       </div>
       <input type="file" id="modelPicker" webkitdirectory multiple class="hidden">
       <div class="hint">
-        Pick the folder holding <code>config.json</code>, <code>tokenizer.json</code>,
-        <code>model.q8.gguf</code> and <code>default-voice.safetensors</code> — plus
-        <code>voices.json</code> and <code>voices/</code> if you want extra voices.
-        The files are copied into this browser's storage once, then work offline; the extension
-        itself carries no model.
+        The English 31M checkpoint is built in. To use another one, pick the folder holding
+        <code>config.json</code>, <code>tokenizer.json</code>, <code>model.q8.gguf</code> and
+        <code>default-voice.safetensors</code> — plus <code>voices.json</code> and
+        <code>voices/</code> if you want extra voices. Imported files are copied into this
+        browser's storage once, then work offline.
       </div>
       <div id="model-info" class="small">Checking…</div>
       <div id="missing" class="warning hidden"></div>
@@ -46,7 +46,7 @@
       <div class="hint">
         A voice is a small <code>.safetensors</code> file from
         <a href="https://huggingface.co/gradium/phonon-voices" target="_blank" rel="noreferrer">gradium/phonon-voices</a>
-        or Gradium Studio. Voices are kept in this browser and shared by every imported model.
+        or Gradium Studio. Voices are kept in this browser and shared by every model.
         Pick the catalog folder (the one with <code>voices.jsonl</code>) to get friendly names.
       </div>
       <label>Search

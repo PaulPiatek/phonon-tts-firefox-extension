@@ -4,6 +4,8 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline";
 
+import { preparePackage } from "./package-assets.mjs";
+
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const WEB_EXT_CLI = join(ROOT, "node_modules", "web-ext", "bin", "web-ext.js");
 
@@ -76,6 +78,10 @@ if (!existsSync(WEB_EXT_CLI)) {
 }
 
 const { key, secret } = await resolveCredentials();
+
+// web-ext packages src/ only, so the notices and the bundled checkpoint have to be copied in
+// before signing too.
+await preparePackage();
 
 console.log("Signing with web-ext (channel 'unlisted' from .web-ext-config.mjs)...");
 const child = spawn(process.execPath, [WEB_EXT_CLI, "sign", ...process.argv.slice(2)], {

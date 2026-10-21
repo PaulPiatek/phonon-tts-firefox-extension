@@ -6,9 +6,11 @@
   runtime: menus, model lifetime, playback. `options.*` is the settings page.
 - `src/vendor/phonon-tts/` — the runtime, copied from `node_modules/phonon-tts` by
   `npm run vendor`. Never edit by hand; bump the dependency and re-run.
-- `src/store.js` + `src/model-files.js` + `src/voice-files.js` — the only model source (a folder
+- `src/model.js` — the checkpoint in use: the bundled `phonon-31m-en` (files under `src/models/`,
+  copied from `models/` before packaging) or an imported record; builds the runtime spec.
+- `src/store.js` + `src/model-files.js` + `src/voice-files.js` — imported checkpoints (a folder
   picked in the options page, validated, filtered to the files the runtime opens and copied into
-  IndexedDB as blobs) plus the global voice library. No model ships with the extension.
+  IndexedDB as blobs) plus the global voice library. The bundled model bypasses them.
 - `scripts/` — `fetch-model.mjs` (Hub download into `models/`), `bench.mjs` (wasm diagnostic),
   `vendor-runtime.mjs`.
 
@@ -19,7 +21,13 @@
   class name instead of its content.
 - `npm run lint` — `web-ext lint`, must stay at 0 errors / 0 warnings.
 - `npm run vendor` — refresh `src/vendor/phonon-tts` after changing the dependency.
-- `npm run sign` — build and sign for AMO (unlisted), prompting for API credentials.
+- `npm run clean` — removes the generated copies in `src/` and the unsigned zips in
+  `web-ext-artifacts/`; signed `.xpi` releases are kept.
+- `npm run build` — `web-ext build`; `prebuild` runs `scripts/package-assets.mjs`, which cleans
+  and then copies `THIRD_PARTY_NOTICES.md` and `models/phonon-31m-en/` into `src/` (both
+  gitignored). A build without that model folder fails there.
+- `npm run sign` — the same clean-and-copy, then build and sign for AMO (unlisted), prompting
+  for API credentials.
 - `npm run fetch-model -- --voice Zoey` — model/voices into `models/…`, to import in the UI.
 - `npm run bench -- --model models/phonon-31m-en --voice Zoey` — real wasm run in Node, writes
   `bench.wav`.
@@ -37,16 +45,19 @@
 - **Extension pages are not cross-origin isolated**, so wasm threads are unavailable: the
   runtime reports 1 thread and that is expected. Do not try to "fix" it. WebGPU works and is
   opt-in through `device: 'auto'`.
-- **The model is gated on Hugging Face.** `hf://` URLs cannot be used from the browser (no
-  token); the extension only reads models imported through the options page.
-- **There is exactly one model source**: an imported record in IndexedDB
-  (`settings.modelName`). An empty name is a valid state — `describeModel` returns `source:
-  "none"` and `buildSpec` throws a message telling the user to import a model. Do not add a
-  bundled-model fallback.
+- **The 40m models are gated on Hugging Face.** `hf://` URLs cannot be used from the browser (no
+  token); the extension reads the bundled 31m checkpoint and models imported through the options
+  page.
+- **An empty `settings.modelName` means the bundled checkpoint.** `describeModel` returns
+  `source: "bundled"` and `buildSpec` resolves `models/phonon-31m-en/…` with
+  `browser.runtime.getURL`; a non-empty name is an imported IndexedDB record. The bundled files
+  are copied into `src/models/` by `scripts/package-assets.mjs` and gitignored, so loading `src/`
+  in `about:debugging` without that copy leaves the model missing.
 - **Imported models become blob URLs in the background page, never in the options page.** A blob
   URL dies with the document that created it, and the background page is what restarts and
   reloads the model. `disposeEngine` must revoke `state.blobUrls`, and a failed load must revoke
-  the URLs it just made. Library voices are blob URLs too and go in the same list.
+  the URLs it just made. Library voices are blob URLs too and go in the same list; the bundled
+  model's own files are extension URLs and add none.
 - **Voices are a global library, not part of a model.** They live in the `voices` store of the
   same IndexedDB (v2). A voice name the model already has (`default` on every checkpoint)
   shadows the library one: `describeModel` leaves it out of `voices`, `buildSpec` skips it, and
@@ -67,8 +78,9 @@
   `currentModel`, so typing does not round-trip to the background. Importing a voice clears the
   filter so the new rows are visible.
 - **A model's languages come from its imported `config.json` blob** (`describeModel`), so the
-  page can warn before anything is loaded. The language is a load option: changing it must
-  dispose the engine (it is in `needsReload`) and rebuild on the next Speak.
+  page can warn before anything is loaded. The bundled 31m reports `["en"]` without reading
+  anything. The language is a load option: changing it must dispose the engine (it is in
+  `needsReload`) and rebuild on the next Speak.
 - **Speaking rate is the model's `duration_delta` conditioner**, passed at load as
   `conditions: { duration_delta: x }` (negative faster, positive slower). It is also in
   `needsReload`. The slider's −0.5…+0.5 range is empirical: ±0.4 moved a 5.2 s sentence to
@@ -101,5 +113,7 @@
 - The extension is MIT: root `LICENSE` and `src/LICENSE` (the latter ships in the XPI).
 - The vendored runtime is MIT OR Apache-2.0; keep `src/vendor/phonon-tts/LICENSE-MIT` and
   `LICENSE-APACHE` inside the package. `npm run vendor` copies them.
-- Model weights and voices are not distributed; users import them. Do not bundle them without
-  handling the CC BY-NC 4.0 (40m weights) / Apache-2.0 (31m weights, voices) terms.
+- The bundled `phonon-31m-en` weights, tokenizer and default voice are Apache-2.0 and ship in
+  the XPI. The licence text is `src/vendor/phonon-tts/LICENSE-APACHE` and the attribution is
+  `THIRD_PARTY_NOTICES.md`, copied in at build time. The 40m weights are CC BY-NC 4.0
+  (non-commercial) and must not be bundled; the voice catalog is Apache-2.0.

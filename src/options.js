@@ -1,5 +1,6 @@
 import { collectModelFiles } from "./model-files.js";
 import { collectVoiceFiles } from "./voice-files.js";
+import { BUNDLED_MODEL } from "./model.js";
 import { store } from "./store.js";
 
 const api = globalThis.browser ?? globalThis.chrome;
@@ -204,10 +205,10 @@ function renderVoices(model) {
 function missingNodes(model) {
   if (model.source === "none") {
     return [
-      node("strong", "No model imported yet."),
+      node("strong", "No model available."),
       document.createElement("br"),
       document.createTextNode(
-        "Press “Import a model folder…” above and pick the folder with config.json, tokenizer.json, model.q8.gguf and default-voice.safetensors."
+        "The bundled model is missing from this build. Reinstall the extension, or import a model folder above."
       )
     ];
   }
@@ -233,10 +234,10 @@ function renderModelChoices(settings) {
   currentSettings = settings;
   const selected = settings.modelName || "";
   els.modelName.replaceChildren();
-  const placeholder = node("option", imported.length === 0 ? "No model imported" : "Choose a model…");
-  placeholder.value = "";
-  placeholder.disabled = true;
-  els.modelName.append(placeholder);
+  // The empty value is the bundled checkpoint, always present.
+  const bundled = node("option", BUNDLED_MODEL.label);
+  bundled.value = "";
+  els.modelName.append(bundled);
   for (const model of imported) {
     const option = node("option", `Imported: ${model.name} (${mb(model.bytes)})`);
     option.value = model.name;
@@ -280,11 +281,16 @@ function render(state) {
   }
   els.voice.value = model.voices.includes(settings.voice) ? settings.voice : model.defaultVoice ?? "";
 
-  const source = model.source === "imported" ? "imported, in browser storage" : "no model imported";
+  const source =
+    model.source === "bundled"
+      ? "bundled, in the extension"
+      : model.source === "imported"
+        ? "imported, in browser storage"
+        : "unavailable";
   const languages = Array.isArray(model.languages) ? model.languages : [];
   els.modelInfo.textContent =
     model.source === "none"
-      ? "No model imported"
+      ? "No model available"
       : `${model.modelDir} · ${source} · ${model.voices.length} voice${model.voices.length === 1 ? "" : "s"}` +
         (languages.length ? ` · languages: ${languages.join(", ")}` : "");
 
@@ -440,7 +446,7 @@ els.deleteModel.addEventListener("click", async () => {
     renderModelChoices({ ...(currentSettings ?? {}), modelName: "" });
     els.modelName.value = "";
     await saveForm({ quiet: true });
-    showStatus(`Deleted ${name}. Import a model to speak again.`, "ok");
+    showStatus(`Deleted ${name}. The bundled model speaks again.`, "ok");
   } catch (error) {
     showStatus("Could not delete: " + (error?.message ?? error), "error");
   }
