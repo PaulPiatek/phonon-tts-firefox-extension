@@ -136,7 +136,7 @@ export class Model {
      * dates), `"none"`, or a comma-separated list of rule names.
      *
      * `conditions` is optional and sets the config's conditioners, each as `"NAME=VALUE"`,
-     * e.g. `["padding_bonus=0.5"]`. Those left out take their defaults.
+     * e.g. `["duration_delta=0.5"]`. Those left out take their defaults.
      *
      * `device` is `"cpu"` or `"webgpu"`. WebGPU needs `q8` weights in a GGUF file, and a
      * build with the `webgpu` feature.
@@ -478,7 +478,7 @@ function __wbg_get_imports(memory) {
             const ret = arg0.limits;
             return ret;
         },
-        __wbg_log_615ed1aba37eb36a: function(arg0, arg1) {
+        __wbg_log_a01e1128b7591626: function(arg0, arg1) {
             console.log(getStringFromWasm0(arg0, arg1));
         },
         __wbg_mapAsync_3546b4b874e14738: function(arg0, arg1, arg2, arg3) {
