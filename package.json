@@ -11,7 +11,7 @@
     "clean": "node scripts/clean.mjs",
     "package-assets": "node scripts/package-assets.mjs",
     "build": "npm run clean && npm run vendor && npm run package-assets && npm run lint && npm test",
-    "sign": "node scripts/sign.mjs",
+    "sign": "npm run build && node scripts/sign.mjs",
     "fetch-model": "node scripts/fetch-model.mjs",
     "bench": "node scripts/bench.mjs",
     "vendor": "node scripts/vendor-runtime.mjs"

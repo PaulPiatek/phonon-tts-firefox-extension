@@ -1,15 +1,13 @@
-// Puts the files that must travel in the XPI into src/ before web-ext packs it: web-ext only
+// Copies the files that must travel in the XPI into src/ before web-ext packs it: web-ext only
 // packages src/, and there is no bundler to do this for us.
 //
-// The packaging starts from a clean tree: `preparePackage` removes the copies (and unsigned
-// zips) before copying again, so nothing from an older build can linger.
-//
-//   npm run clean
-//   node scripts/package-assets.mjs
-//   npm run sign    (calls this itself)
-//
 // The copies are gitignored. The root THIRD_PARTY_NOTICES.md and models/ are the sources of
-// truth; the checkpoint comes from `npm run fetch-model`.
+// truth; the runtime comes from `npm run vendor` and the checkpoint from `npm run fetch-model`.
+//
+//   npm run package-assets
+//
+// `npm run build` cleans first and runs vendor, this and the checks in order. `npm run sign`
+// runs the build before signing, so src/ is always complete when it is packed.
 
 import { cp, mkdir, readdir, rm, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -23,6 +21,7 @@ export const MODEL_NAME = BUNDLED_MODEL.name;
 export const MODEL_TARGET = join(root, "src", BUNDLED_MODEL.dir);
 const MODELS_TARGET = join(root, "src", "models");
 const NOTICES_TARGET = join(root, "src", "THIRD_PARTY_NOTICES.md");
+const VENDOR_TARGET = join(root, "src", "vendor", "phonon-tts");
 const ARTIFACTS = join(root, "web-ext-artifacts");
 
 // Only what the runtime opens; BUNDLED_MODEL is the one place that says which files those are.
@@ -43,12 +42,13 @@ async function exists(path) {
 }
 
 /**
- * Remove what the build generates: the copies under src/ and the unsigned zips in
- * web-ext-artifacts/. Signed `.xpi` files are releases rather than build output, so they stay.
+ * Remove everything the packaging generates: the copies under src/ (including the vendored
+ * runtime) and any unsigned zips in web-ext-artifacts/. Signed `.xpi` files are releases rather
+ * than build output, so they stay.
  */
 export async function cleanPackage() {
   const removed = [];
-  for (const path of [MODELS_TARGET, NOTICES_TARGET]) {
+  for (const path of [MODELS_TARGET, NOTICES_TARGET, VENDOR_TARGET]) {
     if (!(await exists(path))) continue;
     await rm(path, { recursive: true, force: true });
     removed.push(path);
@@ -93,15 +93,7 @@ export async function copyModel() {
   return MODEL_TARGET;
 }
 
-/** Clean first, then copy: a build never inherits files from an earlier one. */
-export async function preparePackage() {
-  const cleaned = await cleanPackage();
-  return { cleaned, notices: await copyNotices(), model: await copyModel() };
-}
-
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const { cleaned, notices, model } = await preparePackage();
-  for (const path of cleaned) console.log(`removed ${path}`);
-  console.log(`copied THIRD_PARTY_NOTICES.md -> ${notices}`);
-  console.log(`copied ${MODEL_NAME} -> ${model}`);
+  console.log(`copied THIRD_PARTY_NOTICES.md -> ${await copyNotices()}`);
+  console.log(`copied ${MODEL_NAME} -> ${await copyModel()}`);
 }

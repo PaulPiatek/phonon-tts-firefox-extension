@@ -8,5 +8,8 @@ src/.amo-upload-uuid
 src/THIRD_PARTY_NOTICES.md
 src/models/
 
+# Copied from node_modules by npm run vendor; package-lock.json pins the version.
+src/vendor/phonon-tts/
+
 # Downloaded checkpoints live outside the extension and are imported in the UI.
 models/

@@ -137,9 +137,9 @@ downloads it into the model folder, and importing that folder brings it along.
 ### 4. Load the extension
 
 `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** → pick
-`src/manifest.json`. The bundled checkpoint is copied into `src/models/` by the packaging step,
-so run `npm run package-assets` once first if you have not packaged yet. For a signed install,
-`npm run sign` builds and signs the XPI into `web-ext-artifacts/` (about 60 MB); imported models
+`src/manifest.json`. Run `npm run build` once first: it copies the runtime, the notices and the
+bundled checkpoint into `src/` (all generated, none tracked). For a signed install, `npm run sign`
+runs that build and then signs the XPI into `web-ext-artifacts/` (about 60 MB); imported models
 still live in browser storage.
 
 ### 5. Check it
@@ -185,8 +185,9 @@ pitch.
 - `npm run lint` - `web-ext lint` (must stay at 0 errors/warnings).
 - `npm run build` - clean, re-vendor the runtime, copy the notices and checkpoint, then lint and
   test. It leaves `src/` ready to load and produces no XPI; `npm run sign` does the signing.
-- `npm run clean` - removes the generated copies in `src/` and any unsigned zips left in
-  `web-ext-artifacts/`; signed XPIs are kept. `npm run sign` cleans first.
+- `npm run clean` - removes the generated copies in `src/` (runtime, notices, checkpoint) and
+  any unsigned zips left in `web-ext-artifacts/`; signed XPIs are kept. `npm run build` cleans
+  first.
 
 ## Publishing
 
@@ -213,7 +214,7 @@ and voices are not packaged.
 | `src/player.js` | Schedules streamed `Float32Array` chunks on one 24 kHz `AudioContext`. |
 | `src/settings.js` | Language, voice, device, temperature, imported model name. |
 | `src/options.*` | Settings UI, model import/delete, live status. |
-| `src/vendor/phonon-tts/` | [`phonon-tts`](https://www.npmjs.com/package/phonon-tts) 0.4.1, copied from `node_modules` by `npm run vendor`. Plain ES modules plus the wasm builds. |
+| `src/vendor/phonon-tts/` | [`phonon-tts`](https://www.npmjs.com/package/phonon-tts) 0.4.1, copied from `node_modules` by `npm run vendor` (generated, not tracked). Plain ES modules plus the wasm builds. |
 | `scripts/fetch-model.mjs` | Downloads a checkpoint (and voices) from Hugging Face into `models/`. |
 | `scripts/package-assets.mjs` | Copies the notices and the bundled checkpoint into `src/` before `web-ext` packs it. |
 

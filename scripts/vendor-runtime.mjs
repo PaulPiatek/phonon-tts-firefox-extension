@@ -2,6 +2,9 @@
 // load it: extension pages cannot import from node_modules, and bundling is pointless here
 // because the package is plain ES modules plus .wasm files that must sit beside them.
 //
+// The output is gitignored: package.json and package-lock.json pin the version, and this script
+// is the single way it reaches src/. `npm run build` runs it after cleaning.
+//
 //   npm run vendor
 
 import { cp, mkdir, rm, readFile, writeFile } from "node:fs/promises";

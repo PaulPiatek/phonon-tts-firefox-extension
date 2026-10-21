@@ -5,7 +5,8 @@
 - `src/` — Firefox MV3 extension. `background.js` is a module event page and does everything at
   runtime: menus, model lifetime, playback. `options.*` is the settings page.
 - `src/vendor/phonon-tts/` — the runtime, copied from `node_modules/phonon-tts` by
-  `npm run vendor`. Never edit by hand; bump the dependency and re-run.
+  `npm run vendor`. Generated and gitignored, like the checkpoint. Never edit by hand; bump the
+  dependency and re-run.
 - `src/model.js` — the checkpoint in use: the bundled `phonon-31m-en` (files under `src/models/`,
   copied from `models/` before packaging) or an imported record; builds the runtime spec.
 - `src/store.js` + `src/model-files.js` + `src/voice-files.js` — imported checkpoints (a folder
@@ -25,9 +26,9 @@
   `web-ext-artifacts/`; signed `.xpi` releases are kept.
 - `npm run build` — clean, re-vendor the runtime, copy the notices and checkpoint into `src/`,
   then lint and test. It leaves `src/` ready for `about:debugging`; it does not produce an XPI.
-- `npm run sign` — cleans the generated copies, copies the notices and checkpoint into `src/`,
-  then builds and signs for AMO (unlisted), prompting for API credentials. `web-ext sign` does
-  the packaging itself; there is no separate build step.
+- `npm run sign` — runs `npm run build` first, then builds and signs for AMO (unlisted),
+  prompting for API credentials. `web-ext sign` does the packaging itself; there is no separate
+  package step.
 - `npm run fetch-model -- --voice Zoey` — model/voices into `models/…`, to import in the UI.
 - `npm run bench -- --model models/phonon-31m-en --voice Zoey` — real wasm run in Node, writes
   `bench.wav`.
