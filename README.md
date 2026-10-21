@@ -137,10 +137,10 @@ downloads it into the model folder, and importing that folder brings it along.
 ### 4. Load the extension
 
 `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…** → pick
-`src/manifest.json`. The bundled checkpoint is copied into `src/models/` at build time, so run
-`node scripts/package-assets.mjs` once first (or `npm run build`) if you have not built yet. For
-a packaged install, `npm run build` writes a zip to `web-ext-artifacts/` (rename it to `.xpi`, or
-sign it on AMO). The XPI is about 60 MB; imported models still live in browser storage.
+`src/manifest.json`. The bundled checkpoint is copied into `src/models/` by the packaging step,
+so run `node scripts/package-assets.mjs` once first if you have not packaged yet. For a signed
+install, `npm run sign` builds and signs the XPI into `web-ext-artifacts/` (about 60 MB);
+imported models still live in browser storage.
 
 ### 5. Check it
 
@@ -183,8 +183,8 @@ pitch.
   `moz-extension://<uuid>/selftest.html`. It speaks one sentence through the real background
   pipeline and prints device, threads, sample rate and features.
 - `npm run lint` - `web-ext lint` (must stay at 0 errors/warnings).
-- `npm run clean` - removes the generated copies in `src/` and the unsigned zips in
-  `web-ext-artifacts/`; signed XPIs are kept. `npm run build` and `npm run sign` clean first.
+- `npm run clean` - removes the generated copies in `src/` and any unsigned zips left in
+  `web-ext-artifacts/`; signed XPIs are kept. `npm run sign` cleans first.
 
 ## Publishing
 

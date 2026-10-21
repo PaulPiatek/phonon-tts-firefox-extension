@@ -1,12 +1,12 @@
 // Puts the files that must travel in the XPI into src/ before web-ext packs it: web-ext only
 // packages src/, and there is no bundler to do this for us.
 //
-// The build starts from a clean tree: `preparePackage` removes the copies (and unsigned zips)
-// before copying again, so nothing from an older build can linger.
+// The packaging starts from a clean tree: `preparePackage` removes the copies (and unsigned
+// zips) before copying again, so nothing from an older build can linger.
 //
 //   npm run clean
-//   npm run build   (prebuild)
-//   npm run sign    (called from scripts/sign.mjs)
+//   node scripts/package-assets.mjs
+//   npm run sign    (calls this itself)
 //
 // The copies are gitignored. The root THIRD_PARTY_NOTICES.md and models/ are the sources of
 // truth; the checkpoint comes from `npm run fetch-model`.

@@ -1,10 +1,10 @@
 // Removes what the build generates, so the next build starts from nothing: the copies under
-// src/ and the unsigned zips in web-ext-artifacts/. Signed `.xpi` files are releases, not build
-// output, and are left alone.
+// src/ and any unsigned zips left in web-ext-artifacts/. Signed `.xpi` files are releases, not
+// build output, and are left alone.
 //
 //   npm run clean
 //
-// `npm run build` and `npm run sign` do this themselves before copying.
+// `npm run sign` does this itself before copying.
 
 import { cleanPackage } from "./package-assets.mjs";
 

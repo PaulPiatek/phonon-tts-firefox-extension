@@ -21,13 +21,11 @@
   class name instead of its content.
 - `npm run lint` — `web-ext lint`, must stay at 0 errors / 0 warnings.
 - `npm run vendor` — refresh `src/vendor/phonon-tts` after changing the dependency.
-- `npm run clean` — removes the generated copies in `src/` and the unsigned zips in
+- `npm run clean` — removes the generated copies in `src/` and any unsigned zips left in
   `web-ext-artifacts/`; signed `.xpi` releases are kept.
-- `npm run build` — `web-ext build`; `prebuild` runs `scripts/package-assets.mjs`, which cleans
-  and then copies `THIRD_PARTY_NOTICES.md` and `models/phonon-31m-en/` into `src/` (both
-  gitignored). A build without that model folder fails there.
-- `npm run sign` — the same clean-and-copy, then build and sign for AMO (unlisted), prompting
-  for API credentials.
+- `npm run sign` — cleans the generated copies, copies the notices and checkpoint into `src/`,
+  then builds and signs for AMO (unlisted), prompting for API credentials. `web-ext sign` does
+  the packaging itself; there is no separate build step.
 - `npm run fetch-model -- --voice Zoey` — model/voices into `models/…`, to import in the UI.
 - `npm run bench -- --model models/phonon-31m-en --voice Zoey` — real wasm run in Node, writes
   `bench.wav`.

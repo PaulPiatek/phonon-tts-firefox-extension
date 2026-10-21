@@ -9,8 +9,6 @@
     "test": "node --test \"tests/*.test.mjs\"",
     "lint": "web-ext lint",
     "clean": "node scripts/clean.mjs",
-    "build": "web-ext build",
-    "prebuild": "node scripts/package-assets.mjs",
     "sign": "node scripts/sign.mjs",
     "fetch-model": "node scripts/fetch-model.mjs",
     "bench": "node scripts/bench.mjs",
