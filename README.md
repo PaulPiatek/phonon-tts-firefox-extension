@@ -1,14 +1,13 @@
-# ff-phonon-tts
+# Spokra
 
-A Firefox extension that reads selected text aloud with
-[Phonon](https://huggingface.co/gradium/phonon-40m-multilingual), running entirely inside the
-browser: no server, no API key, no network at runtime.
+A Firefox extension that reads selected text aloud, entirely inside the browser: no server, no
+API key, no network at runtime.
 
 ## What it does
 
 - **Toolbar button** — speaks the current selection; click again (or right-click → **🔇 Stop
-  Phonon**) to stop.
-- **Context menu** — **🔊 Phonon** on any selection.
+  Spokra**) to stop.
+- **Context menu** — **🔊 Spokra** on any selection.
 - **Streams** — the first audio starts as soon as the first 80 ms frame is generated; the rest
   keeps generating while it plays.
 - **Runs on the CPU** by default, and on **WebGPU** when the browser hands out a real adapter
@@ -155,9 +154,11 @@ Every setting saves as soon as it changes — there is no Save button.
 Select text on any page, then:
 
 - click the toolbar button, or
-- right-click → **🔊 Phonon**.
+- right-click → **🔊 Spokra**.
 
-Click the button again, or right-click → **🔇 Stop Phonon**, to stop.
+Click the button again, or right-click → **🔇 Stop Spokra**, to stop.
+
+Right-click the toolbar button → **Spokra Settings…** opens the options page.
 
 The **Language** setting is the language of the *text*, not of the UI: it decides how numbers,
 dates and symbols are read. Phonon 40m multilingual speaks English, French, German, Spanish and
@@ -239,3 +240,7 @@ The extension is **MIT licensed** — see [LICENSE](LICENSE). The bundled runtim
 The bundled English `phonon-31m-en` checkpoint (weights, tokenizer and default voice) is
 **Apache-2.0**, so it ships in the package. The multilingual 40m weights are **CC BY-NC 4.0**
 (non-commercial) and are not packaged; the `gradium/phonon-voices` catalog is Apache-2.0.
+
+Phonon builds on Kyutai's Pocket TTS and Mimi codec, whose weights are CC BY 4.0;
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) records that provenance alongside the terms of
+the bundled checkpoint.

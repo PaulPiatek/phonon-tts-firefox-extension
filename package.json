@@ -1,7 +1,7 @@
 {
-  "name": "ff-phonon-tts",
-  "version": "0.6.0",
-  "description": "Firefox extension that reads selected text aloud with Phonon TTS, on-device in the browser.",
+  "name": "spokra",
+  "version": "0.8.0",
+  "description": "Firefox extension that reads selected text aloud, on-device, with the Phonon 31M voice.",
   "private": true,
   "license": "MIT",
   "type": "module",

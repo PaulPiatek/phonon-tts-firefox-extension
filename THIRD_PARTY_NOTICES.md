@@ -3,7 +3,7 @@
 ## phonon-tts
 
 The extension bundles the [`phonon-tts`](https://www.npmjs.com/package/phonon-tts) runtime,
-part of [xn-ptts](https://github.com/gradium-ai/xn-ptts), Copyright Gradium.
+part of [xn-ptts](https://github.com/gradium-ai/xn-ptts), by Gradium.
 
 It is licensed under the **MIT License OR the Apache License, Version 2.0**, at your option.
 The full texts ship inside the extension package:
@@ -14,8 +14,11 @@ The full texts ship inside the extension package:
 The files are copied verbatim by `scripts/vendor-runtime.mjs`, which records the version in
 `src/vendor/phonon-tts/VERSION`. No modifications are made to them.
 
-The same licence covers the WebAssembly builds in `wasm/` and `wasm-threads/` (compiled from the
-xn-ptts Rust runtime) and the `wasm-bindgen-rayon` worker helper that ships with them.
+The same licence covers the xn-ptts code compiled into the WebAssembly builds in `wasm/` and
+`wasm-threads/`, and the `wasm-bindgen-rayon` worker helper that ships with them. The builds also
+contain statically linked crates from the xn-ptts dependency tree. As far as is known, most are
+MIT or Apache-2.0. Individual copyright notices for those crates are not included; they could be
+generated from the upstream `Cargo.lock` (for example with `cargo-about`).
 
 ## Icons
 
@@ -29,8 +32,24 @@ The extension package includes the English Phonon 31M checkpoint,
 `tokenizer.json`, `model.q8.gguf` and `default-voice.safetensors`, copied from this repository's
 `models/phonon-31m-en/` by `scripts/package-assets.mjs`.
 
-Those files are **Apache-2.0**, which permits redistribution and commercial use. The licence text
-ships in `src/vendor/phonon-tts/LICENSE-APACHE`; the weights are unmodified.
+Those files are **Apache-2.0**: they are published by Gradium under that licence, which permits
+redistribution and commercial use. They are the files of `gradium/phonon-31m-en` at commit
+`92741c5b07d085ff840e26fea8ce43110b87852f`. That repository ships no separate `LICENSE` file, and
+its model card, which names no copyright holder, is the only licence statement; the Apache-2.0
+text above is the licence text. The files are unmodified.
+
+## Upstream models
+
+The [phonon-31m-en model card](https://huggingface.co/gradium/phonon-31m-en) says Phonon builds
+on Pocket TTS and the Mimi codec, both by [Kyutai](https://kyutai.org/):
+
+- [Pocket TTS](https://huggingface.co/kyutai/pocket-tts): model weights **CC BY 4.0**, code MIT.
+- [Mimi](https://huggingface.co/kyutai/mimi): model weights **CC BY 4.0**, code in
+  [moshi](https://github.com/kyutai-labs/moshi).
+
+This records where the model comes from. It does not relicense Phonon: Gradium publishes the 31M
+checkpoint as Apache-2.0, and those are the terms this extension relies on. Speech should not be
+used to impersonate a real person, or to pass synthetic audio off as a recording of one.
 
 ## Imported models and voices
 
@@ -40,6 +59,7 @@ import files they downloaded themselves. The terms that apply to those files are
 - [`gradium/phonon-40m-multilingual`](https://huggingface.co/gradium/phonon-40m-multilingual):
   **CC BY-NC 4.0** (non-commercial).
 - [`gradium/phonon-31m-en`](https://huggingface.co/gradium/phonon-31m-en): **Apache-2.0**.
-- [`gradium/phonon-voices`](https://huggingface.co/gradium/phonon-voices): **Apache-2.0**.
+- [`gradium/phonon-voices`](https://huggingface.co/gradium/phonon-voices): **Apache-2.0** (per
+  repository metadata).
 
 Consult each repository for the authoritative terms.

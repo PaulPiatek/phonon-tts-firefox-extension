@@ -35,7 +35,7 @@ async function run() {
   if (state.model.missing.length) throw new Error(`model unavailable: ${state.model.missing.join(", ")}`);
 
   const started = performance.now();
-  await send({ type: "speak", text: "Hello. This is the Phonon self test, speaking from the extension." });
+  await send({ type: "speak", text: "Hello. This is the Spokra self test, speaking from the extension." });
   log("asked the background page to speak; waiting for it to finish");
 
   const finished = await waitFor(

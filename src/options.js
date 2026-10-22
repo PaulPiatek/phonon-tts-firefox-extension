@@ -5,12 +5,12 @@ import { store } from "./store.js";
 
 const api = globalThis.browser ?? globalThis.chrome;
 const SAMPLES = {
-  en: "Hello. Phonon is running inside your browser, with no server.",
-  fr: "Bonjour. Phonon fonctionne dans votre navigateur, sans serveur.",
-  de: "Hallo. Phonon läuft in Ihrem Browser, ohne Server.",
-  es: "Hola. Phonon se ejecuta en tu navegador, sin servidor.",
-  pt: "Olá. O Phonon está a ser executado no seu navegador, sem servidor.",
-  none: "Hello. Phonon is running inside your browser, with no server."
+  en: "Hello. Spokra is running inside your browser, with no server.",
+  fr: "Bonjour. Spokra fonctionne dans votre navigateur, sans serveur.",
+  de: "Hallo. Spokra läuft in Ihrem Browser, ohne Server.",
+  es: "Hola. Spokra se ejecuta en tu navegador, sin servidor.",
+  pt: "Olá. O Spokra está a ser executado no seu navegador, sem servidor.",
+  none: "Hello. Spokra is running inside your browser, with no server."
 };
 
 const $ = (id) => document.getElementById(id);

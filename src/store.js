@@ -6,7 +6,7 @@
 // (the runtime only takes URLs). Blob URLs are scoped to the page that made them, so the
 // options page must never hand them to the background and go away.
 
-const DB_NAME = "phonon-models";
+const DB_NAME = "spokra-models";
 const DB_VERSION = 2;
 const MODELS = "models";
 const VOICES = "voices";

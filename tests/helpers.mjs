@@ -106,6 +106,10 @@ export function makeBrowser() {
       getPlatformInfo() {
         log("runtime.getPlatformInfo");
         return Promise.resolve({ os: "test", arch: "x86" });
+      },
+      openOptionsPage() {
+        log("runtime.openOptionsPage");
+        return Promise.resolve();
       }
     },
     scripting: {

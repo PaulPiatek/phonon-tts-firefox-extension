@@ -11,16 +11,18 @@ import { store } from "./store.js";
 import { Player } from "./player.js";
 import { loadEngine } from "./engine.js";
 
-const SPEAK_MENU_ID = "phonon-speak";
-const STOP_MENU_ID = "phonon-stop";
+const SPEAK_MENU_ID = "spokra-speak";
+const STOP_MENU_ID = "spokra-stop";
+const SETTINGS_MENU_ID = "spokra-settings";
 const KEEP_ALIVE_MS = 15000;
+const HINT_CLEAR_MS = 2000;
 const TEST_TEXT = {
-  en: "Hello. Phonon is running inside your browser, with no server.",
-  fr: "Bonjour. Phonon fonctionne dans votre navigateur, sans serveur.",
-  de: "Hallo. Phonon läuft in Ihrem Browser, ohne Server.",
-  es: "Hola. Phonon se ejecuta en tu navegador, sin servidor.",
-  pt: "Olá. O Phonon está a ser executado no seu navegador, sem servidor.",
-  none: "Hello. Phonon is running inside your browser, with no server."
+  en: "Hello. Spokra is running inside your browser, with no server.",
+  fr: "Bonjour. Spokra fonctionne dans votre navigateur, sans serveur.",
+  de: "Hallo. Spokra läuft in Ihrem Browser, ohne Server.",
+  es: "Hola. Spokra se ejecuta en tu navegador, sin servidor.",
+  pt: "Olá. O Spokra está a ser executado no seu navegador, sem servidor.",
+  none: "Hello. Spokra is running inside your browser, with no server."
 };
 
 const api = globalThis.browser ?? globalThis.chrome;
@@ -45,12 +47,30 @@ function updateBadge() {
   api.action.setBadgeText({ text: state.status.badge }).catch(() => {});
   api.action
     .setTitle({
-      title: state.session ? "Phonon: click to stop" : "Phonon: click to speak selection"
+      title: state.session ? "Spokra: click to stop" : "Spokra: click to speak selection"
     })
     .catch(() => {});
 }
 
+let hintClearTimer = null;
+
+function cancelHintClear() {
+  if (!hintClearTimer) return;
+  clearTimeout(hintClearTimer);
+  hintClearTimer = null;
+}
+
+/** Show the "nothing selected" hint on the badge, then let it go away by itself. */
+function hintEmptySelection() {
+  setStatus("Select some text first", "!");
+  hintClearTimer = setTimeout(() => {
+    hintClearTimer = null;
+    if (state.status.badge === "!") setStatus("Idle");
+  }, HINT_CLEAR_MS);
+}
+
 function setStatus(text, badge = "", ok = false) {
+  cancelHintClear();
   state.status = { text, badge, ok };
   updateBadge();
   // Extension pages listening for live status (the options page) get it directly; there
@@ -223,7 +243,7 @@ function fail(error) {
 async function speak(text, voiceOverride) {
   const clean = (text || "").trim();
   if (!clean) {
-    setStatus("Select some text first", "!");
+    hintEmptySelection();
     return;
   }
   stop();
@@ -305,8 +325,17 @@ async function speak(text, voiceOverride) {
 
 function installMenus() {
   api.contextMenus.removeAll().finally(() => {
-    api.contextMenus.create({ id: SPEAK_MENU_ID, title: "🔊 Phonon", contexts: ["selection"] });
-    api.contextMenus.create({ id: STOP_MENU_ID, title: "🔇 Stop Phonon", contexts: ["all"] });
+    api.contextMenus.create({ id: SPEAK_MENU_ID, title: "🔊 Spokra", contexts: ["selection"] });
+    api.contextMenus.create({ id: STOP_MENU_ID, title: "🔇 Stop Spokra", contexts: ["all"] });
+    try {
+      api.contextMenus.create({
+        id: SETTINGS_MENU_ID,
+        title: "Spokra Settings…",
+        contexts: ["action"]
+      });
+    } catch {
+      // Firefox for Android has no toolbar button to right-click.
+    }
   });
 }
 
@@ -331,6 +360,9 @@ api.contextMenus.onClicked.addListener((info) => {
     return;
   }
   if (info.menuItemId === STOP_MENU_ID) stop();
+  if (info.menuItemId === SETTINGS_MENU_ID) {
+    api.runtime.openOptionsPage().catch((error) => fail(error));
+  }
 });
 
 api.action.onClicked.addListener(async (tab) => {
@@ -340,7 +372,7 @@ api.action.onClicked.addListener(async (tab) => {
   }
   const text = await getSelectedText(tab?.id);
   if (!text) {
-    setStatus("Select some text first", "!");
+    hintEmptySelection();
     return;
   }
   speak(text).catch((error) => fail(error));

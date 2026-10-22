@@ -82,11 +82,11 @@ describe("background.js", () => {
   function speakViaMenu(text = "hello world") {
     const handler = browser.__registry.contextMenuClick;
     assert.ok(handler, "context menu listener should be registered");
-    handler({ menuItemId: "phonon-speak", selectionText: text });
+    handler({ menuItemId: "spokra-speak", selectionText: text });
   }
 
   function stopViaMenu() {
-    browser.__registry.contextMenuClick({ menuItemId: "phonon-stop" });
+    browser.__registry.contextMenuClick({ menuItemId: "spokra-stop" });
   }
 
   function lastBadgeText() {
@@ -107,16 +107,30 @@ describe("background.js", () => {
     });
   }
 
-  test("installing the extension creates the two menu entries", async () => {
+  test("installing the extension creates the menu entries", async () => {
     await loadBackground();
     await browser.__registry.installed.values().next().value();
     await flush();
 
     assert.deepEqual(
       browser.__registry.menuItems.map((item) => item.id),
-      ["phonon-speak", "phonon-stop"]
+      ["spokra-speak", "spokra-stop", "spokra-settings"]
     );
     assert.deepEqual(browser.__registry.menuItems[0].contexts, ["selection"]);
+    const settings = browser.__registry.menuItems.find((item) => item.id === "spokra-settings");
+    assert.deepEqual(settings.contexts, ["action"], "the settings entry belongs to the toolbar icon");
+    assert.match(settings.title, /Settings/);
+  });
+
+  test("the toolbar icon's context menu opens the settings", async () => {
+    await loadBackground();
+    browser.__registry.contextMenuClick({ menuItemId: "spokra-settings" });
+    await flush();
+
+    assert.ok(
+      browser.__calls.some((call) => call.method === "runtime.openOptionsPage"),
+      "openOptionsPage should have been called"
+    );
   });
 
   test("speaking loads the imported checkpoint with the saved settings", async () => {
@@ -350,6 +364,29 @@ describe("background.js", () => {
     assert.equal(lastBadgeText(), "!");
     assert.equal(loader.engine?.calls.length ?? 0, 0);
     assert.equal(audio.contexts.length, 0);
+  });
+
+  test("the no-selection badge clears itself after two seconds", async () => {
+    await loadBackground();
+
+    const realSetTimeout = globalThis.setTimeout;
+    const delays = [];
+    globalThis.setTimeout = (fn, ms, ...args) => {
+      delays.push(ms);
+      fn(...args);
+      return 1;
+    };
+    try {
+      browser.__registry.actionClick({ id: 7 });
+      await flush();
+    } finally {
+      globalThis.setTimeout = realSetTimeout;
+    }
+
+    assert.deepEqual(delays, [2000], "the hint should be cleared after two seconds");
+    assert.ok(badges().includes("!"), "the hint should be shown first");
+    assert.equal(lastBadgeText(), "", "the badge should be empty again");
+    assert.equal(browser.__registry.messages.at(-1).text, "Idle");
   });
 
   test("the toolbar button speaks the page selection", async () => {
