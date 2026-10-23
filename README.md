@@ -227,6 +227,7 @@ and voices are not packaged.
 | `src/vendor/phonon-tts/` | [`phonon-tts`](https://www.npmjs.com/package/phonon-tts) 0.4.1, copied from `node_modules` by `npm run vendor` (generated, not tracked). Plain ES modules plus the wasm builds. |
 | `scripts/fetch-model.mjs` | Downloads a checkpoint (and voices) from Hugging Face into `models/`. |
 | `scripts/package-assets.mjs` | Copies the notices and the bundled checkpoint into `src/` before `web-ext` packs it. |
+| `THIRD_PARTY_RUST.md` | The 146 Rust crates linked into the wasm builds, with licence texts; rendered from `third-party/xn-ptts-0.4.1.json` by `scripts/rust-licenses.mjs`. |
 
 An imported model lives in IndexedDB as `Blob`s, and so does the voice library. The background
 page reads them when the model loads and makes `blob:` URLs for the runtime, which only accepts
@@ -243,8 +244,10 @@ CPU thread by default, or on WebGPU when that is selected explicitly.
 ## Licence
 
 The extension is **MIT licensed** — see [LICENSE](LICENSE). The bundled runtime (`phonon-tts`, in
-`src/vendor/phonon-tts/`) is MIT OR Apache-2.0; its licence texts ship with it, and
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists the third-party terms.
+`src/vendor/phonon-tts/`) is MIT OR Apache-2.0; its licence texts ship with it.
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists the third-party terms, and
+[THIRD_PARTY_RUST.md](THIRD_PARTY_RUST.md) lists the 146 Rust crates statically linked into the two
+WebAssembly builds, with the full text of each licence.
 
 The bundled English `phonon-31m-en` checkpoint (weights, tokenizer and default voice) is
 **Apache-2.0**, so it ships in the package. The multilingual 40m weights are **CC BY-NC 4.0**
@@ -259,9 +262,10 @@ the bundled checkpoint.
 The notices are checked whenever what ships changes, not on a calendar:
 
 - **A new `phonon-tts` version** (`npm run vendor`): read the package's `LICENSE-*` files and its
-  README again, and keep the WebAssembly note accurate. The builds link Rust crates whose
-  notices the package does not carry; that gap is tracked upstream in
-  [xn-ptts#247](https://github.com/gradium-ai/xn-ptts/issues/247).
+  README again, regenerate `third-party/xn-ptts-<version>.json` from the new `Cargo.lock`, and run
+  `node scripts/rust-licenses.mjs`; `npm test` fails while the notices and the inventory disagree.
+  The builds link Rust crates whose notices the package does not carry; that gap is tracked
+  upstream in [xn-ptts#247](https://github.com/gradium-ai/xn-ptts/issues/247).
 - **A different or refreshed checkpoint** (`npm run fetch-model`, or replacing `models/` by
   hand): run `npm run check-model`, confirm the licence and update the repository and commit pin
   in `THIRD_PARTY_NOTICES.md`, including the Pocket TTS and Mimi attribution.

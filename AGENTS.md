@@ -149,17 +149,41 @@
 - The extension is MIT: root `LICENSE` and `src/LICENSE` (the latter ships in the XPI).
 - The vendored runtime is MIT OR Apache-2.0; keep `src/vendor/phonon-tts/LICENSE-MIT` and
   `LICENSE-APACHE` inside the package. `npm run vendor` copies them.
+- The Rust crates linked into both wasm builds are in `THIRD_PARTY_RUST.md`, rendered from
+  `third-party/xn-ptts-<version>.json` by `scripts/rust-licenses.mjs`. Both are inputs, not build
+  output: the JSON is what a machine with Rust produces, the renderer only formats it, and
+  `npm test` fails when the two disagree. `npm run build` copies the markdown into `src/`.
 - The bundled `phonon-31m-en` weights, tokenizer and default voice are Apache-2.0 and ship in
   the XPI. The licence text is `src/vendor/phonon-tts/LICENSE-APACHE` and the attribution is
   `THIRD_PARTY_NOTICES.md`, copied in at build time. The 40m weights are CC BY-NC 4.0
   (non-commercial) and must not be bundled; the voice catalog is Apache-2.0.
 - Review the notices when the inputs change, not on a schedule:
-  - `phonon-tts` bump: re-read its `LICENSE-*` and README, and keep the wasm crate caveat
-    current (tracked upstream as
-    [xn-ptts#247](https://github.com/gradium-ai/xn-ptts/issues/247)).
+  - `phonon-tts` bump: re-read its `LICENSE-*` and README, then regenerate
+    `third-party/xn-ptts-<version>.json` and run `node scripts/rust-licenses.mjs` (see below).
+    Upstream still publishes no crate list of its own; that gap is tracked in
+    [xn-ptts#247](https://github.com/gradium-ai/xn-ptts/issues/247).
   - checkpoint refresh or replacement: run `npm run check-model`, confirm the licence and update
     the repository and commit pin plus the Pocket TTS/Mimi attribution.
   - a new shipped asset under `src/`: record its origin and terms.
-  - before signing: `src/THIRD_PARTY_NOTICES.md` must match the root file, and the pinned
-    commit must be the one `models/` came from. `npm run build` copies the notices; running
-    `scripts/sign.mjs` alone signs whatever `src/` already holds.
+  - before signing: `src/THIRD_PARTY_NOTICES.md` and `src/THIRD_PARTY_RUST.md` must match their
+    root files, and the pinned commit must be the one `models/` came from. `npm run build` copies
+    the notices; running `scripts/sign.mjs` alone signs whatever `src/` already holds.
+
+### Regenerating the Rust notices
+
+`third-party/xn-ptts-<version>.json` is the only part written by hand, and it is mostly a
+transcript. It needs Rust, crates.io and the upstream tag, so it stays out of `npm run build`:
+
+1. Clone the tag the npm package was published from:
+   `git clone --depth 1 --branch v<version> https://github.com/gradium-ai/xn-ptts`.
+2. For each of `--features webgpu` and `--features threads,webgpu`, take two things for
+   `--target wasm32-unknown-unknown` from `ptts-wasm`: the `cargo tree -e normal` closure, and
+   `cargo about generate --format json`.
+3. Keep the crates in either closure, drop those whose only target is a proc macro, and take each
+   crate's licence text from the cargo-about output. The rest of the object is provenance: tag,
+   commit, `Cargo.lock` hash, npm integrity, tool version.
+4. `node scripts/rust-licenses.mjs`, then `npm test`.
+
+`cargo about`'s `--target` flag is not enough on its own: it resolves the whole workspace's
+features together and lists native-only crates such as `clap`, `anyhow` and `ptts-coreml`, which
+are not in the modules. The `cargo tree` closure is what is actually linked.

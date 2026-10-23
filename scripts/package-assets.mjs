@@ -10,7 +10,7 @@
 // runs the build before signing, so src/ is always complete when it is packed.
 
 import { cp, mkdir, readdir, rm, stat } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { BUNDLED_MODEL } from "../src/model.js";
@@ -21,6 +21,7 @@ export const MODEL_NAME = BUNDLED_MODEL.name;
 export const MODEL_TARGET = join(root, "src", BUNDLED_MODEL.dir);
 const MODELS_TARGET = join(root, "src", "models");
 const NOTICES_TARGET = join(root, "src", "THIRD_PARTY_NOTICES.md");
+const RUST_NOTICES_TARGET = join(root, "src", "THIRD_PARTY_RUST.md");
 const VENDOR_TARGET = join(root, "src", "vendor", "phonon-tts");
 const ARTIFACTS = join(root, "web-ext-artifacts");
 
@@ -48,7 +49,7 @@ async function exists(path) {
  */
 export async function cleanPackage() {
   const removed = [];
-  for (const path of [MODELS_TARGET, NOTICES_TARGET, VENDOR_TARGET]) {
+  for (const path of [MODELS_TARGET, NOTICES_TARGET, RUST_NOTICES_TARGET, VENDOR_TARGET]) {
     if (!(await exists(path))) continue;
     await rm(path, { recursive: true, force: true });
     removed.push(path);
@@ -62,10 +63,11 @@ export async function cleanPackage() {
   return removed;
 }
 
-/** Copy THIRD_PARTY_NOTICES.md into src/, so the licences and attribution ship. */
+/** Copy the licence files into src/, so the licences and attribution ship. */
 export async function copyNotices() {
   await cp(join(root, "THIRD_PARTY_NOTICES.md"), NOTICES_TARGET);
-  return NOTICES_TARGET;
+  await cp(join(root, "THIRD_PARTY_RUST.md"), RUST_NOTICES_TARGET);
+  return [NOTICES_TARGET, RUST_NOTICES_TARGET];
 }
 
 /** Copy the bundled checkpoint from models/ into src/models/, so it ships. */
@@ -94,6 +96,6 @@ export async function copyModel() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  console.log(`copied THIRD_PARTY_NOTICES.md -> ${await copyNotices()}`);
+  for (const path of await copyNotices()) console.log(`copied ${relative(root, path)} -> ${path}`);
   console.log(`copied ${MODEL_NAME} -> ${await copyModel()}`);
 }

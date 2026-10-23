@@ -15,10 +15,16 @@ The files are copied verbatim by `scripts/vendor-runtime.mjs`, which records the
 `src/vendor/phonon-tts/VERSION`. No modifications are made to them.
 
 The same licence covers the xn-ptts code compiled into the WebAssembly builds in `wasm/` and
-`wasm-threads/`, and the `wasm-bindgen-rayon` worker helper that ships with them. The builds also
-contain statically linked crates from the xn-ptts dependency tree. As far as is known, most are
-MIT or Apache-2.0. Individual copyright notices for those crates are not included; they could be
-generated from the upstream `Cargo.lock` (for example with `cargo-about`).
+`wasm-threads/`, and the `wasm-bindgen-rayon` worker helper that ships with them, which its own
+authors publish under MIT OR Apache-2.0.
+
+Those builds also link crates from the xn-ptts dependency tree. All 146 of them, with their
+versions and the full text of every licence they are distributed under, are in
+[`THIRD_PARTY_RUST.md`](THIRD_PARTY_RUST.md). That file is generated from the `Cargo.lock` at the
+upstream commit these builds came from; it has no unresolved entry. Rust's own `core`, `alloc`,
+`std` and `compiler_builtins` are linked in as well but are not Cargo crates; they are MIT OR
+Apache-2.0, `compiler_builtins` with the LLVM exception. Upstream still publishes no inventory of
+its own, so this one is ours ([xn-ptts#247](https://github.com/gradium-ai/xn-ptts/issues/247)).
 
 ## Icons
 
