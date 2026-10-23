@@ -23,6 +23,7 @@ const els = {
   modelInfo: $("model-info"),
   missing: $("missing"),
   langWarning: $("lang-warning"),
+  deviceWarning: $("device-warning"),
   importVoices: $("importVoices"),
   importVoiceFolder: $("importVoiceFolder"),
   voicePicker: $("voicePicker"),
@@ -302,6 +303,16 @@ function render(state) {
   } else {
     els.langWarning.classList.add("hidden");
     els.langWarning.textContent = "";
+  }
+
+  if (settings.device === "webgpu") {
+    els.deviceWarning.classList.remove("hidden");
+    els.deviceWarning.textContent =
+      "WebGPU is experimental: Firefox runs out of graphics memory after about three minutes " +
+      "of speech, and the audio then stops with a WebGPU error. Use the CPU for long texts.";
+  } else {
+    els.deviceWarning.classList.add("hidden");
+    els.deviceWarning.textContent = "";
   }
 
   renderVoices(model);

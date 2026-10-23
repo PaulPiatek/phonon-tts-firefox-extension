@@ -424,7 +424,7 @@ describe("background.js", () => {
     });
 
     assert.equal(state.settings.lang, "en");
-    assert.equal(state.settings.device, "auto");
+    assert.equal(state.settings.device, "cpu");
     assert.equal(state.settings.temperature, 2);
     assert.equal(state.settings.modelName, "");
     assert.deepEqual(browser.__storage.get("settings"), state.settings);

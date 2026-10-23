@@ -3,13 +3,18 @@
 /** Languages Phonon can normalize text for. `none` passes text through as written. */
 export const LANGS = ["en", "fr", "de", "es", "pt", "none"];
 
-/** Where generation runs. `auto` takes WebGPU when the browser hands out a real adapter. */
-export const DEVICES = ["auto", "cpu", "webgpu"];
+/**
+ * Where generation runs. The CPU is the default: it is the path the checkpoint was calibrated
+ * on, and it is the only one that survives long text. Firefox's WebGPU backend runs out of GPU
+ * memory after about three minutes of audio, so WebGPU stays an opt-in for short utterances.
+ * `auto` is gone; a settings object that still says `auto` normalizes to the CPU.
+ */
+export const DEVICES = ["cpu", "webgpu"];
 
 export const DEFAULTS = {
   lang: "en",
   voice: "default",
-  device: "auto",
+  device: "cpu",
   temperature: 0.3,
   // Passed to the model as its `duration_delta` conditioner: negative is faster, positive slower.
   durationDelta: 0,

@@ -37,7 +37,8 @@ describe("normalizeSettings", () => {
   test("falls back on unknown languages and devices", () => {
     assert.equal(normalizeSettings({ lang: "it" }).lang, "en");
     assert.equal(normalizeSettings({ lang: "none" }).lang, "none");
-    assert.equal(normalizeSettings({ device: "gpu" }).device, "auto");
+    assert.equal(normalizeSettings({ device: "gpu" }).device, "cpu");
+    assert.equal(normalizeSettings({ device: "auto" }).device, "cpu", "the old default becomes the CPU");
   });
 
   test("clamps temperature instead of failing on nonsense", () => {

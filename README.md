@@ -10,9 +10,9 @@ API key, no network at runtime.
 - **Context menu** — **🔊 Spokra** on any selection.
 - **Streams** — the first audio starts as soon as the first 80 ms frame is generated; the rest
   keeps generating while it plays.
-- **Runs on the CPU** by default, and on **WebGPU** when the browser hands out a real adapter
-  (setting: `Auto`). On a typical laptop the CPU build is around 5× faster than real time,
-  single-threaded.
+- **Runs on the CPU** by default; on a typical laptop the CPU build is around 5× faster than
+  real time, single-threaded. **WebGPU** is opt-in and marked experimental: Firefox runs out
+  of graphics memory after about three minutes of audio, so it is only useful for short texts.
 - **Options page** — import the model folder, import voices, language, device, temperature,
   speaking rate, and a Speak button for trying a sentence.
 
@@ -232,7 +232,7 @@ extension package with `browser.runtime.getURL`.
 
 The runtime needs WebAssembly SIMD (all current Firefox, Chrome, Safari). Threads are not
 available in extension pages, because those are not cross-origin isolated; the model runs on one
-CPU thread, or on WebGPU when `Auto` finds an adapter.
+CPU thread by default, or on WebGPU when that is selected explicitly.
 
 ## Licence
 

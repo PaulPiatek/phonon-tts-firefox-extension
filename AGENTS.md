@@ -46,8 +46,15 @@
 - **The AudioContext is opened inside the click**, before the model load and before the first
   `await`. Created seconds later outside the gesture it can stay suspended.
 - **Extension pages are not cross-origin isolated**, so wasm threads are unavailable: the
-  runtime reports 1 thread and that is expected. Do not try to "fix" it. WebGPU works and is
-  opt-in through `device: 'auto'`.
+  runtime reports 1 thread and that is expected. Do not try to "fix" it. Generation runs on the
+  CPU by default; WebGPU is an explicit, experimental option.
+- **Firefox's WebGPU backend exhausts GPU memory after ~3 minutes of audio.** Measured with
+  `phonon-tts` 0.4.1: a WebGPU engine fails with `map_async: BufferAsyncError` after
+  4.0–4.3 M samples (≈170 s) no matter how the text is split, and the `broadcast_f32` /
+  `unary_f32` bind-group errors that follow are downstream of the lost device. Chromium/Dawn
+  does not reproduce it (19:46 clean). Disposing the engine and loading a new one resets the
+  budget, which is why `settings.device` defaults to `cpu`; the options page warns when WebGPU
+  is selected. Do not raise that default without re-measuring in Firefox.
 - **The 40m models are gated on Hugging Face.** `hf://` URLs cannot be used from the browser (no
   token); the extension reads the bundled 31m checkpoint and models imported through the options
   page.

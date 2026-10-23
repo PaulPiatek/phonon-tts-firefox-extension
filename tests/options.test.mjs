@@ -135,7 +135,7 @@ describe("options page", () => {
     const settings = {
       lang: "en",
       voice: "default",
-      device: "auto",
+      device: "cpu",
       temperature: 0.3,
       durationDelta: 0,
       modelName: "phonon-40m-multilingual"
@@ -329,5 +329,26 @@ describe("options page", () => {
     assert.equal(warning.classList.contains("hidden"), false);
     assert.match(warning.textContent, /trained for en/);
     assert.match(warning.textContent, /German/);
+  });
+
+  test("warns that WebGPU runs out of graphics memory on long text", async () => {
+    await load();
+
+    const device = elements.get("device");
+    device.value = "webgpu";
+    device.fire("change");
+    await sleep();
+
+    const warning = elements.get("device-warning");
+    assert.equal(warning.classList.contains("hidden"), false);
+    assert.match(warning.textContent, /out of graphics memory/);
+    assert.match(warning.textContent, /CPU/);
+
+    device.value = "cpu";
+    device.fire("change");
+    await sleep();
+
+    assert.equal(warning.classList.contains("hidden"), true);
+    assert.equal(warning.textContent, "");
   });
 });
