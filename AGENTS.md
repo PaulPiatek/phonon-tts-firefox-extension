@@ -9,6 +9,9 @@
   dependency and re-run.
 - `src/model.js` — the checkpoint in use: the bundled `phonon-31m-en` (files under `src/models/`,
   copied from `models/` before packaging) or an imported record; builds the runtime spec.
+- `src/selection.js` — `readSelection` runs in the page through `scripting.executeScript` and
+  returns the selection as blocks; `prepareSpeechText` turns those blocks into the text the
+  model speaks. Both the toolbar and the context menu go through it.
 - `src/store.js` + `src/model-files.js` + `src/voice-files.js` — imported checkpoints (a folder
   picked in the options page, validated, filtered to the files the runtime opens and copied into
   IndexedDB as blobs) plus the global voice library. The bundled model bypasses them.
@@ -48,13 +51,28 @@
 - **Extension pages are not cross-origin isolated**, so wasm threads are unavailable: the
   runtime reports 1 thread and that is expected. Do not try to "fix" it. Generation runs on the
   CPU by default; WebGPU is an explicit, experimental option.
-- **Firefox's WebGPU backend exhausts GPU memory after ~3 minutes of audio.** Measured with
-  `phonon-tts` 0.4.1: a WebGPU engine fails with `map_async: BufferAsyncError` after
-  4.0–4.3 M samples (≈170 s) no matter how the text is split, and the `broadcast_f32` /
-  `unary_f32` bind-group errors that follow are downstream of the lost device. Chromium/Dawn
-  does not reproduce it (19:46 clean). Disposing the engine and loading a new one resets the
-  budget, which is why `settings.device` defaults to `cpu`; the options page warns when WebGPU
-  is selected. Do not raise that default without re-measuring in Firefox.
+- **Firefox's DX12 WebGPU backend loses the device within seconds, from descriptor-heap
+  fragmentation — not memory.** `wgpu-hal`'s shader-visible descriptor heap is a range
+  allocator; when it cannot satisfy a slice it maps the error to `DeviceError::OutOfMemory`, and
+  wgpu-core escalates to losing the device. The GPU process logs
+  `[wgpu_hal::dx12::descriptor] Unable to allocate descriptors: RangeAllocationError {
+  fragmented_free_length: 3 }`, then `Invalidating command encoder … BindGroup "broadcast_f32"`,
+  and only then does `map_async` report `BufferAsyncError`. Nothing reaches the page first: no
+  error scope, no uncaptured error, no `device.lost` rejection.
+- **Do not diagnose this with a synthetic loop of uniform bind groups.** The runtime creates and
+  drops a bind group per dispatch, so a few seconds of speech is ~530 k of each (530,461 create /
+  530,311 drop / 528,353 dispatch, measured on 158.0.1). The counts balance, so it is
+  fragmentation, not a leak — and fragmentation needs varied allocation sizes. A page churning
+  one fixed-size bind group survived 240 s, 15,392 iterations, 120 MiB mapped and 240 GiB
+  churned at a pegged GPU, and cannot reproduce it. VRAM is not the constraint either: 16 GB
+  card, ~75 MB checkpoint. The old "~170 s / 4.0–4.3 M samples" note was an older-Firefox
+  measurement; the failure tracks bind-group churn, not duration, and arrives in seconds.
+- **Chromium/Dawn runs the same audio clean (19:46).** Disposing the engine and loading a new one
+  gives a new device and a fresh heap, which is why the workaround works. That is why
+  `settings.device` defaults to `cpu` and the options page warns when WebGPU is picked; do not
+  raise the default without re-measuring, and treat WebGPU as short-utterance only until the
+  upstream fix lands. Observe the failure with `about:logging` and the `WebGPU` preset — the
+  `CanvasRenderer` thread of the GPU process carries the log.
 - **The 40m models are gated on Hugging Face.** `hf://` URLs cannot be used from the browser (no
   token); the extension reads the bundled 31m checkpoint and models imported through the options
   page.
@@ -106,6 +124,14 @@
   it batched or IDB will crawl.
 - **`unlimitedStorage`** is in the manifest because an imported checkpoint is ~75 MB of
   IndexedDB plus the voice library. Do not remove it.
+- **Pauses come from punctuation, not from line breaks.** The runtime normalizes whitespace, so
+  a newline between a heading and its paragraph is read straight through; a full stop is what
+  makes the pause (measured on the 31m model: ~0.5 s after a period, ~0.3 s without one).
+  `readSelection` in `src/selection.js` is sent to the page by `scripting.executeScript`, which
+  serializes its source: it must stay self-contained, with no imports or references to other
+  module bindings. `prepareSpeechText` closes every block that is followed by another one as a
+  sentence; the last block keeps its own ending. The context menu reads the page too;
+  `info.selectionText` is only the fallback where scripting is not allowed.
 - **`cache: false`** on `PhononTTS.load`: the checkpoint is local, so Cache API copies are pure
   duplication.
 - **Firefox MV3 CSP needs `'wasm-unsafe-eval'`** in `content_security_policy.extension_pages`, or

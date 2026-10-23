@@ -158,6 +158,11 @@ Select text on any page, then:
 
 Click the button again, or right-click → **🔇 Stop Spokra**, to stop.
 
+The selection is read from the page's HTML rather than its flattened text: a heading, list
+item, table cell or `<br>` ends a sentence even when it has no full stop of its own. The model
+pauses at sentence ends, so that is what puts a pause after a headline. Pages the extension may
+not script fall back to the plain selection text.
+
 Right-click the toolbar button → **Spokra Settings…** opens the options page.
 
 The **Language** setting is the language of the *text*, not of the UI: it decides how numbers,
@@ -216,6 +221,7 @@ and voices are not packaged.
 | `src/voice-files.js` | Validates picked voice files and names them from `voices.jsonl`. |
 | `src/store.js` | Imported checkpoints and voices in IndexedDB, listed and deleted from the options page. |
 | `src/player.js` | Schedules streamed `Float32Array` chunks on one 24 kHz `AudioContext`. |
+| `src/selection.js` | Reads the page selection block by block and closes each block as a sentence for the model. |
 | `src/settings.js` | Language, voice, device, temperature, imported model name. |
 | `src/options.*` | Settings UI, model import/delete, live status. |
 | `src/vendor/phonon-tts/` | [`phonon-tts`](https://www.npmjs.com/package/phonon-tts) 0.4.1, copied from `node_modules` by `npm run vendor` (generated, not tracked). Plain ES modules plus the wasm builds. |

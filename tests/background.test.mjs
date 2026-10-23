@@ -401,6 +401,56 @@ describe("background.js", () => {
     assert.equal(loader.engine.calls[0].text, "from the page");
   });
 
+  test("each block of the selection ends a sentence, so a headline gets a pause", async () => {
+    browser.scripting.executeScript = async () => [{ result: ["Nightfall", "The city sleeps"] }];
+    const loader = makeEngine({ chunks: [pcm(240)] });
+    setEngineLoader(loader);
+
+    await loadBackground();
+    browser.__registry.actionClick({ id: 7 });
+    await flush();
+
+    assert.equal(
+      loader.engine.calls[0].text,
+      "Nightfall. The city sleeps",
+      "the heading becomes its own sentence"
+    );
+  });
+
+  test("the context menu reads the page's blocks instead of the flattened selection", async () => {
+    browser.scripting.executeScript = async () => [{ result: ["Nightfall", "The city sleeps"] }];
+    const loader = makeEngine({ chunks: [pcm(240)] });
+    setEngineLoader(loader);
+
+    await loadBackground();
+    browser.__registry.contextMenuClick({
+      menuItemId: "spokra-speak",
+      selectionText: "Nightfall The city sleeps",
+      tab: { id: 7 }
+    });
+    await flush();
+
+    assert.equal(loader.engine.calls[0].text, "Nightfall. The city sleeps");
+  });
+
+  test("the context menu falls back to the selection text when the page cannot be read", async () => {
+    browser.scripting.executeScript = async () => {
+      throw new Error("cannot script this page");
+    };
+    const loader = makeEngine({ chunks: [pcm(240)] });
+    setEngineLoader(loader);
+
+    await loadBackground();
+    browser.__registry.contextMenuClick({
+      menuItemId: "spokra-speak",
+      selectionText: "fallback line",
+      tab: { id: 7 }
+    });
+    await flush();
+
+    assert.equal(loader.engine.calls[0].text, "fallback line");
+  });
+
   test("the toolbar button stops while audio is playing", async () => {
     setEngineLoader(makeEngine({ chunks: [pcm(7200)], wait: true }));
 

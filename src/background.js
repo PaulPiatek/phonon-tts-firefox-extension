@@ -10,6 +10,7 @@ import { buildSpec, describeModel } from "./model.js";
 import { store } from "./store.js";
 import { Player } from "./player.js";
 import { loadEngine } from "./engine.js";
+import { prepareSpeechText, readSelection } from "./selection.js";
 
 const SPEAK_MENU_ID = "spokra-speak";
 const STOP_MENU_ID = "spokra-stop";
@@ -346,17 +347,21 @@ async function getSelectedText(tabId) {
   try {
     const [injection] = await api.scripting.executeScript({
       target: { tabId },
-      func: () => window.getSelection()?.toString() || ""
+      func: readSelection
     });
-    return (injection?.result || "").trim();
+    return prepareSpeechText(injection?.result ?? []);
   } catch {
     return "";
   }
 }
 
-api.contextMenus.onClicked.addListener((info) => {
+api.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId === SPEAK_MENU_ID) {
-    speak(info.selectionText || "").catch((error) => fail(error));
+    // Read the page instead of `selectionText`: only the HTML says where a heading ends, and
+    // a heading without a full stop would otherwise run into the paragraph below it. The
+    // plain text remains the fallback for pages that cannot be scripted.
+    const text = (await getSelectedText(info.tab?.id)) || prepareSpeechText(info.selectionText);
+    speak(text).catch((error) => fail(error));
     return;
   }
   if (info.menuItemId === STOP_MENU_ID) stop();

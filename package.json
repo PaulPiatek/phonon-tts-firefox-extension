@@ -1,6 +1,6 @@
 {
   "name": "spokra",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Firefox extension that reads selected text aloud, on-device, with the Phonon 31M voice.",
   "private": true,
   "license": "MIT",
