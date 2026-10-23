@@ -184,6 +184,9 @@ pitch.
   `moz-extension://<uuid>/selftest.html`. It speaks one sentence through the real background
   pipeline and prints device, threads, sample rate and features.
 - `npm run lint` - `web-ext lint` (must stay at 0 errors/warnings).
+- `npm run check-model` — hashes `models/phonon-31m-en/` against the commit pinned in
+  `THIRD_PARTY_NOTICES.md` and reports whether upstream has a newer checkpoint. Needs the
+  network; exits non-zero when the local files do not match the pin.
 - `npm run build` - clean, re-vendor the runtime, copy the notices and checkpoint, then lint and
   test. It leaves `src/` ready to load and produces no XPI; `npm run sign` does the signing.
 - `npm run clean` - removes the generated copies in `src/` (runtime, notices, checkpoint) and
@@ -244,3 +247,20 @@ The bundled English `phonon-31m-en` checkpoint (weights, tokenizer and default v
 Phonon builds on Kyutai's Pocket TTS and Mimi codec, whose weights are CC BY 4.0;
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) records that provenance alongside the terms of
 the bundled checkpoint.
+
+### When to review the notices
+
+The notices are checked whenever what ships changes, not on a calendar:
+
+- **A new `phonon-tts` version** (`npm run vendor`): read the package's `LICENSE-*` files and its
+  README again, and keep the WebAssembly note accurate. The builds link Rust crates whose
+  notices the package does not carry; that gap is tracked upstream in
+  [xn-ptts#247](https://github.com/gradium-ai/xn-ptts/issues/247).
+- **A different or refreshed checkpoint** (`npm run fetch-model`, or replacing `models/` by
+  hand): run `npm run check-model`, confirm the licence and update the repository and commit pin
+  in `THIRD_PARTY_NOTICES.md`, including the Pocket TTS and Mimi attribution.
+- **A new asset under `src/`** (icons, fonts, sounds, binaries): record where it came from and
+  under which terms.
+- **Before `npm run sign`**: `src/THIRD_PARTY_NOTICES.md` must match the root file, and the
+  pinned commit must be the one the bundled files came from. `npm run build` copies the notices;
+  invoking `scripts/sign.mjs` on its own signs whatever `src/` already holds.

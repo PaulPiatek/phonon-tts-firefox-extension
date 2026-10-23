@@ -30,6 +30,8 @@
   prompting for API credentials. `web-ext sign` does the packaging itself; there is no separate
   package step.
 - `npm run fetch-model -- --voice Zoey` — model/voices into `models/…`, to import in the UI.
+- `npm run check-model` — hashes `models/phonon-31m-en/` against the pin in
+  `THIRD_PARTY_NOTICES.md` and reports upstream checkpoint updates (network).
 - `npm run bench -- --model models/phonon-31m-en --voice Zoey` — real wasm run in Node, writes
   `bench.wav`.
 - Load for testing: `about:debugging#/runtime/this-firefox` → Load Temporary Add-on →
@@ -118,3 +120,13 @@
   the XPI. The licence text is `src/vendor/phonon-tts/LICENSE-APACHE` and the attribution is
   `THIRD_PARTY_NOTICES.md`, copied in at build time. The 40m weights are CC BY-NC 4.0
   (non-commercial) and must not be bundled; the voice catalog is Apache-2.0.
+- Review the notices when the inputs change, not on a schedule:
+  - `phonon-tts` bump: re-read its `LICENSE-*` and README, and keep the wasm crate caveat
+    current (tracked upstream as
+    [xn-ptts#247](https://github.com/gradium-ai/xn-ptts/issues/247)).
+  - checkpoint refresh or replacement: run `npm run check-model`, confirm the licence and update
+    the repository and commit pin plus the Pocket TTS/Mimi attribution.
+  - a new shipped asset under `src/`: record its origin and terms.
+  - before signing: `src/THIRD_PARTY_NOTICES.md` must match the root file, and the pinned
+    commit must be the one `models/` came from. `npm run build` copies the notices; running
+    `scripts/sign.mjs` alone signs whatever `src/` already holds.

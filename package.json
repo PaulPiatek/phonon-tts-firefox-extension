@@ -13,6 +13,7 @@
     "build": "npm run clean && npm run vendor && npm run package-assets && npm run lint && npm test",
     "sign": "npm run build && node scripts/sign.mjs",
     "fetch-model": "node scripts/fetch-model.mjs",
+    "check-model": "node scripts/check-model.mjs",
     "bench": "node scripts/bench.mjs",
     "vendor": "node scripts/vendor-runtime.mjs"
   },
