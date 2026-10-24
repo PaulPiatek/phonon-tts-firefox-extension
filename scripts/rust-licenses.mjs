@@ -131,9 +131,9 @@ export function render(inventory) {
   out.push("## What this list covers", "");
   para(
     `The crate set is the \`cargo tree -e normal\` closure of the \`ptts-wasm\` package for ` +
-      `\`${upstream.target}\`, cross-checked against cargo-about ${tool}. It is not cargo-about's ` +
-      "raw workspace graph: that resolves every workspace member's features together and lists " +
-      "native-only crates such as `clap`, `anyhow` and `ptts-coreml`, which are not in these modules."
+      `\`${upstream.target}\`, cross-checked against cargo-about ${tool}. That is narrower than ` +
+      "cargo-about's defaults, which also list the workspace's build and dev dependencies — " +
+      "`clap`, `anyhow` and `ptts-coreml` among them — none of which is linked into the modules."
   );
   out.push(
     wrap(

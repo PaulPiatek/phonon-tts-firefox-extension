@@ -184,6 +184,13 @@ transcript. It needs Rust, crates.io and the upstream tag, so it stays out of `n
    commit, `Cargo.lock` hash, npm integrity, tool version.
 4. `node scripts/rust-licenses.mjs`, then `npm test`.
 
-`cargo about`'s `--target` flag is not enough on its own: it resolves the whole workspace's
-features together and lists native-only crates such as `clap`, `anyhow` and `ptts-coreml`, which
-are not in the modules. The `cargo tree` closure is what is actually linked.
+`cargo about`'s defaults are not the linked set: without `ignore-build-dependencies` and
+`ignore-dev-dependencies` it also lists the workspace's build and dev dependencies (`clap`,
+`anyhow`, `ptts-coreml`), which never reach the modules. The `cargo tree` closure is what is
+actually linked.
+
+Since 0.4.2 the package ships its own `THIRD_PARTY_LICENSES.md`, written by `make build` through
+`ptts-wasm/about.toml` (`Apache-2.0` first, `--fail` on anything unlisted) and declared in
+`js/package.json`'s `files`. It holds the same crates as ours plus the proc-macro ones. When the
+bundled version carries the file, prefer it: copy it in `vendor-runtime.mjs` and cut this pipeline
+down to a check, rather than shipping two lists.

@@ -20,9 +20,9 @@ both for `wasm32-unknown-unknown`.
 ## What this list covers
 
 The crate set is the `cargo tree -e normal` closure of the `ptts-wasm` package for
-`wasm32-unknown-unknown`, cross-checked against cargo-about 0.9.2. It is not cargo-about's raw
-workspace graph: that resolves every workspace member's features together and lists native-only
-crates such as `clap`, `anyhow` and `ptts-coreml`, which are not in these modules.
+`wasm32-unknown-unknown`, cross-checked against cargo-about 0.9.2. That is narrower than
+cargo-about's defaults, which also list the workspace's build and dev dependencies — `clap`,
+`anyhow` and `ptts-coreml` among them — none of which is linked into the modules.
 
 - Crates that exist only as proc macros (9 of them) are omitted: they run at build time and no
 code from them is linked in.

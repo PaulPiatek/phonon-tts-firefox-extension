@@ -264,8 +264,8 @@ The notices are checked whenever what ships changes, not on a calendar:
 - **A new `phonon-tts` version** (`npm run vendor`): read the package's `LICENSE-*` files and its
   README again, regenerate `third-party/xn-ptts-<version>.json` from the new `Cargo.lock`, and run
   `node scripts/rust-licenses.mjs`; `npm test` fails while the notices and the inventory disagree.
-  The builds link Rust crates whose notices the package does not carry; that gap is tracked
-  upstream in [xn-ptts#247](https://github.com/gradium-ai/xn-ptts/issues/247).
+  Upstream now writes its own `THIRD_PARTY_LICENSES.md` into the package (xn-ptts#247); if the
+  version being bundled carries one, replace ours with it instead of regenerating.
 - **A different or refreshed checkpoint** (`npm run fetch-model`, or replacing `models/` by
   hand): run `npm run check-model`, confirm the licence and update the repository and commit pin
   in `THIRD_PARTY_NOTICES.md`, including the Pocket TTS and Mimi attribution.

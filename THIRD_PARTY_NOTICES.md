@@ -23,8 +23,9 @@ versions and the full text of every licence they are distributed under, are in
 [`THIRD_PARTY_RUST.md`](THIRD_PARTY_RUST.md). That file is generated from the `Cargo.lock` at the
 upstream commit these builds came from; it has no unresolved entry. Rust's own `core`, `alloc`,
 `std` and `compiler_builtins` are linked in as well but are not Cargo crates; they are MIT OR
-Apache-2.0, `compiler_builtins` with the LLVM exception. Upstream still publishes no inventory of
-its own, so this one is ours ([xn-ptts#247](https://github.com/gradium-ai/xn-ptts/issues/247)).
+Apache-2.0, `compiler_builtins` with the LLVM exception. Upstream added a list of its own to the npm
+package after this release ([xn-ptts#247](https://github.com/gradium-ai/xn-ptts/issues/247)); the
+release bundled here predates it, so this file is ours.
 
 ## Icons
 
